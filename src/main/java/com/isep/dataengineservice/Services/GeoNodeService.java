@@ -1,6 +1,7 @@
 package com.isep.dataengineservice.Services;
 
 import com.isep.dataengineservice.Models.GeoPosition;
+import lombok.var;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;

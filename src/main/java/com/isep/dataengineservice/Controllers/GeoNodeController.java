@@ -26,8 +26,8 @@ public class GeoNodeController {
     }
 
 
+    /*what airflow will dogd
 
-    /*what airflow will do
         GeoPosition geoPosition = geoPositions("Paris");
         List<Place> rawPlaces = rawPlaces( geoPosition.getLon(), geoPosition.getLat());
         List<Place> formattedPlaces = formattedPlaces(rawPlaces);

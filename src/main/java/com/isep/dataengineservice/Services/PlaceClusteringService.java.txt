@@ -1,0 +1,131 @@
+package com.isep.dataengineservice.Services;
+
+import com.isep.dataengineservice.Models.Place;
+import org.apache.commons.math3.ml.clustering.Cluster;
+import org.apache.commons.text.similarity.LevenshteinDistance;
+import org.apache.spark.SparkConf;
+import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.mllib.feature.HashingTF;
+import org.apache.commons.math3.ml.clustering.DBSCANClusterer;
+import org.apache.commons.math3.ml.clustering.DoublePoint;
+import org.apache.spark.mllib.feature.IDF;
+import org.apache.spark.mllib.linalg.Vector;
+import org.apache.spark.mllib.linalg.Vectors;
+import org.apache.spark.sql.SparkSession;
+import java.util.*;
+import java.util.regex.Pattern;
+
+public class PlaceClusteringService {
+    static SparkConf sparkConf = new SparkConf().set("spark.ui.port", "3000");
+    static SparkSession spark = SparkSession.builder().config(sparkConf).appName("clustering").master("local[*]").getOrCreate();
+    static JavaSparkContext jsc = new JavaSparkContext(spark.sparkContext());
+    public static void main(String[] args) {
+
+        List<Place> places = Arrays.asList(
+                new Place("Eiffel tower", 143.23, 7),
+                new Place("Effel tour", 142.11, 6),
+                new Place("Efel tour", 138, 5),
+                new Place("rc de Triomphe", 353.71, 6),
+                new Place("arc Triomphe", 349.71, 4),
+                new Place("Triomph Arc", 356.71, 3)
+
+        );
+
+        // Run the DBSCAN clustering algorithm
+        List<Place> uniquePlaces = DBSCANCluster(places);
+
+        System.out.println("Unique places:");
+        uniquePlaces.forEach(System.out::println);
+
+        jsc.close();
+    }
+
+    private static JavaRDD<Place> getPlacesRDD(List<Place> places) {
+        return jsc.parallelize(places);
+    }
+
+    private static JavaRDD<Place> normalize(JavaRDD<Place> places) {
+        Pattern NON_ALPHANUMERIC = Pattern.compile("[^a-zA-Z0-9]+");
+
+        return places.map(place -> {
+            String name = place.getName().toLowerCase();
+            name = NON_ALPHANUMERIC.matcher(name).replaceAll(" ").trim();
+            return new Place(name, place.getDist(), place.getRate());
+        });
+    }
+
+    private static JavaRDD<Vector> calculateLevenshteinDistances(JavaRDD<Place> normalizedPlacesRDD) {
+        LevenshteinDistance levenshteinDistance = new LevenshteinDistance();
+        List<String> placeNames = normalizedPlacesRDD.map(Place::getName).collect();
+        List<Vector> levenshteinDistancesList = new ArrayList<>();
+        for (int i = 0; i < placeNames.size(); i++) {
+            double[] levenshteinDistances = new double[placeNames.size()];
+            for (int j = 0; j < placeNames.size(); j++) {
+                levenshteinDistances[j] = levenshteinDistance.apply(placeNames.get(i), placeNames.get(j));
+            }
+            levenshteinDistancesList.add(Vectors.dense(levenshteinDistances));
+        }
+
+        return jsc.parallelize(levenshteinDistancesList);
+    }
+
+    //this will be useful sometimes for sentiment analysis.
+    private static JavaRDD<Vector> forSentimentAnalysis(JavaRDD<Place> normalizedPlacesRDD) {
+        HashingTF hashingTF = new HashingTF();
+        IDF idf = new IDF();
+        //for each place name, calculate its frequency in the list of places and save that in a matrix.
+        JavaRDD<Vector> tfidfVectorsRDD = normalizedPlacesRDD.map(place -> {
+            String[] words = place.getName().split("\\s+"); //splitting each words components, for example 'eiffel tower' becomes ['eiffel', 'tower']
+            Vector tfVector = hashingTF.transform(Arrays.asList(words)); //this is what calculate the frequency of each word and puts it in a vector
+            return tfVector; //tfVector looks like this:
+        });
+
+        JavaRDD<Vector> tfidVectorsRdd = idf.fit(tfidfVectorsRDD).transform(tfidfVectorsRDD);
+
+        double meanDist = normalizedPlacesRDD.map(Place::getDist).reduce((a, b) -> a + b) / normalizedPlacesRDD.count();
+        double meanRate = normalizedPlacesRDD.map(Place::getRate).reduce((a, b) -> a + b) / normalizedPlacesRDD.count();
+        double stdDevDist = Math.sqrt(normalizedPlacesRDD.map(p -> Math.pow(p.getDist() - meanDist, 2)).reduce((a, b) -> a + b) / normalizedPlacesRDD.count());
+        double stdDevRate = Math.sqrt(normalizedPlacesRDD.map(p -> Math.pow(p.getRate() - meanRate, 2)).reduce((a, b) -> a + b) / normalizedPlacesRDD.count());
+
+        JavaRDD<Vector> combinedVectorsRDD = tfidVectorsRdd.zip(normalizedPlacesRDD).map(tuple -> {
+            Vector nameVector = tuple._1;
+            Place place = tuple._2;
+            double[] combinedArray = Arrays.copyOf(nameVector.toArray(), nameVector.size() + 2);
+
+
+            combinedArray[nameVector.size()] = (place.getDist() - meanDist) / stdDevDist;
+            combinedArray[nameVector.size() + 1] = (place.getRate() - meanRate) / stdDevRate;
+            return Vectors.dense(combinedArray);
+        });
+
+        return combinedVectorsRDD;
+    }
+
+    private static List<Place> DBSCANCluster(List<Place> places) {
+        JavaRDD<Place> placesRDD = getPlacesRDD(places);
+        JavaRDD<Place> placesNormalized = normalize(placesRDD);
+        JavaRDD<Vector> levenshteinDistances = calculateLevenshteinDistances(placesNormalized);
+
+        // Convert the RDD of vectors to a list of DoublePoints
+        List<DoublePoint> doublePoints = levenshteinDistances.map(v -> new DoublePoint(v.toArray())).collect();
+
+        // Create a DBSCANClusterer object with epsilon and minPts parameters
+        DBSCANClusterer<DoublePoint> dbscan = new DBSCANClusterer<>(2, 2);
+
+        // Run the DBSCAN algorithm
+        List<Cluster<DoublePoint>> clusters = dbscan.cluster(doublePoints);
+
+        List<Place> uniquePlaces = new ArrayList<>();
+
+        // Loop through the clusters and get the representative points
+        for (Cluster<DoublePoint> cluster : clusters) {
+            if (!cluster.getPoints().isEmpty()) {
+                DoublePoint representativePoint = cluster.getPoints().get(0);
+                int index = doublePoints.indexOf(representativePoint);
+                uniquePlaces.add(places.get(index));
+            }
+        }
+        return uniquePlaces;
+    }}
+
