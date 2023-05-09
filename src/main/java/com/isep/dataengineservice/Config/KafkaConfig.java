@@ -1,5 +1,6 @@
 package com.isep.dataengineservice.Config;
 
+import com.isep.dataengineservice.Models.GeoPosition;
 import com.isep.dataengineservice.Models.Place;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -22,7 +23,7 @@ import java.util.Map;
 public class KafkaConfig {
 
      @Bean
-    public ProducerFactory<String, List<Place>> producerFactory(){
+    public ProducerFactory<String, GeoPosition> producerFactory(){
         Map<String, Object> producerParams = new HashMap<>();
         producerParams.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "192.168.104.249:9092");
         producerParams.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
@@ -32,17 +33,20 @@ public class KafkaConfig {
     }
 
     @Bean
-    public ConsumerFactory<String, List<Place>> consumerFactory(){
+    public ConsumerFactory<String, GeoPosition> consumerFactory() {
         Map<String, Object> consumerParams = new HashMap<>();
         consumerParams.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "192.168.104.249:9092");
         consumerParams.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-        consumerParams.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
 
-        return new DefaultKafkaConsumerFactory<>(consumerParams, new StringDeserializer(), new JsonDeserializer<>());
+        JsonDeserializer<GeoPosition> deserializer = new JsonDeserializer<>(GeoPosition.class);
+        deserializer.addTrustedPackages("*");
+        consumerParams.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, deserializer);
+
+        return new DefaultKafkaConsumerFactory<>(consumerParams, new StringDeserializer(), deserializer);
     }
 
     @Bean
-    public KafkaTemplate<String, List<Place>> kafkaTemplate(){
+    public KafkaTemplate<String, GeoPosition> kafkaTemplate(){
         return new KafkaTemplate<>(producerFactory());
     }
 

@@ -3,6 +3,7 @@ package com.isep.dataengineservice.Controllers;
 import com.isep.dataengineservice.Models.GeoPosition;
 import com.isep.dataengineservice.Services.GeoNodeService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
@@ -10,8 +11,8 @@ import java.util.HashSet;
 import java.util.Set;
 
 @RestController
-public class GeoNodeController {
 
+public class GeoNodeController {
     @Autowired
     GeoNodeService geoNodeService;
     @GetMapping(value="/api/GeoPositions/{city}")

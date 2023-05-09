@@ -16,8 +16,6 @@ import java.util.stream.Collectors;
 
 @Service
 public class PlaceService {
-    @Autowired
-    KafkaTemplate<String, List<Place>> kafkaTemplate;
     private String places = "Agadir, Paris, Hong kong";
 
    /* @KafkaListener(topics ="Places", groupId = "places")

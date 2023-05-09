@@ -1,6 +1,7 @@
 package com.isep.dataengineservice.Services;
 
 import com.isep.dataengineservice.Models.Place;
+import com.isep.dataengineservice.Models.StreetKeywords;
 import org.apache.commons.math3.ml.clustering.Cluster;
 import org.apache.commons.math3.ml.clustering.DBSCANClusterer;
 import org.apache.commons.math3.ml.clustering.DoublePoint;
@@ -8,25 +9,36 @@ import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.sql.SparkSession;
+import org.apache.commons.lang3.StringUtils;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
-
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+
 @Service
 public class PlaceClusteringService {
-    static SparkConf sparkConf = new SparkConf().set("spark.ui.port", "3000");
-    static SparkSession spark = SparkSession.builder().config(sparkConf).appName("clustering").master("local[*]").getOrCreate();
-    static JavaSparkContext jsc = new JavaSparkContext(spark.sparkContext());
+    SparkConf sparkConf = new SparkConf().set("spark.ui.port", "3000");
+    SparkSession spark = SparkSession.builder().config(sparkConf).appName("clustering").master("local[*]").getOrCreate();
+    //JavaSparkContext jsc = new JavaSparkContext(spark.sparkContext());
+    @NotNull
+    final double NAME_WEIGHT = 1.2;
+    final double FEATURE_WEIGHT = 1;
+    @NotNull
+    final double EPSILON = 5;
+    final int MIN_POINTS = 1;
     public Optional<List<Place>> DbscanCluster(List<Place> places) {
+        JavaSparkContext jsc = new JavaSparkContext(spark.sparkContext());
 
-        JavaRDD<Place> placesRDD = getPlacesRDD(places);
+        JavaRDD<Place> placesRDD = getPlacesRDD(places, jsc);
         JavaRDD<Place> placesNormalized = normalize(placesRDD);
-        JavaRDD<Place> placesNormalizedDistancesAndRates = normalizeDistancesAndRates(placesNormalized);
+        JavaRDD<Place> placesFiltered = filterStreetPlaces(placesNormalized);
+        JavaRDD<Place> placesNormalizedDistancesAndRates = normalizeDistancesAndRates(placesFiltered);
 
         List<double[]> placeFeatures = placesNormalizedDistancesAndRates.map(place -> new double[]{place.getDist(), place.getRate()}).collect();
 
@@ -36,10 +48,10 @@ public class PlaceClusteringService {
                 .collect(Collectors.toList());
 
         //we can change nameWeight and featureWeight to prioritize one over the other.
-        LevenshteinDistanceMeasure myLevenshteinDistanceIMP = new LevenshteinDistanceMeasure(placesNormalizedDistancesAndRates, placeFeatures, 1.2, 1);
+        LevenshteinDistanceMeasure myLevenshteinDistanceIMP = new LevenshteinDistanceMeasure(placesNormalizedDistancesAndRates, placeFeatures, NAME_WEIGHT, FEATURE_WEIGHT);
 
         //epsilon & minPts affect the result a lot.
-        DBSCANClusterer<DoublePoint> dbscan = new DBSCANClusterer<>(5, 1, myLevenshteinDistanceIMP);
+        DBSCANClusterer<DoublePoint> dbscan = new DBSCANClusterer<>(EPSILON, MIN_POINTS, myLevenshteinDistanceIMP);
 
         List<Cluster<DoublePoint>> clusters = dbscan.cluster(indexPoints);
 
@@ -58,8 +70,35 @@ public class PlaceClusteringService {
         jsc.close();
         return Optional.of(uniquePlaces);
     }
+    private static boolean containsStreetKeyword(String placeName) {
+        List<List<String>> allStreetKeywords = Arrays.asList(
+                StreetKeywords.frenchStreets,
+                StreetKeywords.arabicStreets,
+                StreetKeywords.afrikaansStreets,
+                StreetKeywords.chineseStreets,
+                StreetKeywords.dutchStreets,
+                StreetKeywords.englishStreets,
+                StreetKeywords.greekStreets,
+                StreetKeywords.germanStreets,
+                StreetKeywords.hindiStreets,
+                StreetKeywords.italianStreets,
+                StreetKeywords.japaneseStreets,
+                StreetKeywords.spanishStreets,
+                StreetKeywords.swedishStreets,
+                StreetKeywords.swahiliStreets,
+                StreetKeywords.portugueseStreets,
+                StreetKeywords.polishStreets
+        );
 
-    private static JavaRDD<Place> getPlacesRDD(List<Place> places) {
+        return allStreetKeywords.stream().anyMatch(keywords -> keywords.stream().anyMatch(placeName::contains));
+    }
+    private JavaRDD<Place> filterStreetPlaces(JavaRDD<Place> places) {
+        return places
+                .filter(place -> place.getRate() >= 4)
+                .filter(place -> !containsStreetKeyword(place.getName()));
+    }
+
+    private JavaRDD<Place> getPlacesRDD(List<Place> places, JavaSparkContext jsc) {
         return jsc.parallelize(places);
     }
     private static Double getMoyenne(List<Double> features){
@@ -89,12 +128,10 @@ public class PlaceClusteringService {
         return (element - moyenne) / ecartType;
     }
 
-    private static JavaRDD<Place> normalize(JavaRDD<Place> places) {
-        Pattern NON_ALPHANUMERIC = Pattern.compile("[^a-zA-Z0-9]+");
-
+    private JavaRDD<Place> normalize(JavaRDD<Place> places) {
         return places.map(place -> {
-            String name = place.getName().toLowerCase();
-            name = NON_ALPHANUMERIC.matcher(name).replaceAll(" ").trim();
+            String name = StringUtils.stripAccents(place.getName()).toLowerCase();
+            name = name.replaceAll("[^a-zA-Z0-9]+", "");
             return Place.builder().name(name).dist(place.getDist()).rate(place.getRate()).build();
         });
     }
