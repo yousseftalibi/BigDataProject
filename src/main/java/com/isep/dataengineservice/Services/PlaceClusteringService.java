@@ -16,22 +16,20 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-
 
 @Service
 public class PlaceClusteringService {
     SparkConf sparkConf = new SparkConf().set("spark.ui.port", "3000");
     SparkSession spark = SparkSession.builder().config(sparkConf).appName("clustering").master("local[*]").getOrCreate();
-    //JavaSparkContext jsc = new JavaSparkContext(spark.sparkContext());
     @NotNull
     final double NAME_WEIGHT = 1.2;
     final double FEATURE_WEIGHT = 1;
     @NotNull
-    final double EPSILON = 5;
+    final double EPSILON = 7;
     final int MIN_POINTS = 1;
+    final int MIN_RATE_FILTERED = 4;
     public Optional<List<Place>> DbscanCluster(List<Place> places) {
         JavaSparkContext jsc = new JavaSparkContext(spark.sparkContext());
 
@@ -67,7 +65,7 @@ public class PlaceClusteringService {
                 uniquePlaces.add(places.get(neoIndex));
             }
         }
-        jsc.close();
+        //jsc.close();
         return Optional.of(uniquePlaces);
     }
     private static boolean containsStreetKeyword(String placeName) {
@@ -94,7 +92,7 @@ public class PlaceClusteringService {
     }
     private JavaRDD<Place> filterStreetPlaces(JavaRDD<Place> places) {
         return places
-                .filter(place -> place.getRate() >= 4)
+                .filter(place -> place.getRate() >= MIN_RATE_FILTERED)
                 .filter(place -> !containsStreetKeyword(place.getName()));
     }
 

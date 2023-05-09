@@ -16,35 +16,6 @@ import java.util.stream.Collectors;
 
 @Service
 public class PlaceService {
-    private String places = "Agadir, Paris, Hong kong";
-
-   /* @KafkaListener(topics ="Places", groupId = "places")
-    public void consume(ConsumerRecord<String, List<Place>> record) throws IOException {
-        System.out.println("consumed message "+ record.value());
-        List<Place> rawPlaces = Collections.singletonList(new ObjectMapper().readValue((JsonParser) record.value(), Place.class));
-
-        List<Place> uniquePlaces = new ArrayList<>();
-
-        for (Object distinctName : rawPlaces) {
-            if (distinctName.toString().trim().isEmpty()) {
-                continue;
-            }
-            for (Place place : places) {
-                String placeNameNormalized = place.getName().trim().toLowerCase();
-                String distinctNameNormalized = distinctName.toString().trim().toLowerCase();
-
-                if (placeNameNormalized.isEmpty() || distinctNameNormalized.isEmpty()) {
-                    continue;
-                }
-
-                if (placeNameNormalized.equals(distinctNameNormalized) || placeNameNormalized.contains(distinctNameNormalized) || distinctNameNormalized.contains(placeNameNormalized)) {
-                    uniquePlaces.add(place);
-                    break;
-                }
-            }
-        }
-    }*/
-
     public List<Place> getRawPlaces(Double lon, Double lat) {
         RestTemplate restTemplate = new RestTemplate();
         String uri = "https://opentripmap-places-v1.p.rapidapi.com/en/places/radius?radius=500&lon="+lon+"&lat="+lat;
@@ -57,38 +28,4 @@ public class PlaceService {
         return places.getFeatures().stream().map(e -> e.getProperties()).collect(Collectors.toList());
     }
 
-    public List<Place> getFormattedPlaces(List<Place> places){
-
-        RestTemplate restTemplate = new RestTemplate();
-        String uri = "http://localhost:5000/cluster_data";
-        List<String> duplicatePlaces = new ArrayList<>();
-        for (Place p:
-                places) {
-            duplicatePlaces.add(p.getName());
-        }
-        HttpHeaders headers = new HttpHeaders();
-        HttpEntity<List<String>> requestEntity = new HttpEntity<>(duplicatePlaces, headers);
-        ResponseEntity<List> response = restTemplate.exchange(uri, HttpMethod.POST, requestEntity, List.class);
-
-        List<Place> uniquePlaces = new ArrayList<>();
-
-        for (Object distinctName : response.getBody()) {
-            if (distinctName.toString().trim().isEmpty()) {
-                continue;
-            }
-            for (Place place : places) {
-                String placeNameNormalized = place.getName().trim().toLowerCase();
-                String distinctNameNormalized = distinctName.toString().trim().toLowerCase();
-
-                if (placeNameNormalized.isEmpty() || distinctNameNormalized.isEmpty()) {
-                    continue;
-                }
-                if (placeNameNormalized.equals(distinctNameNormalized) || placeNameNormalized.contains(distinctNameNormalized) || distinctNameNormalized.contains(placeNameNormalized)) {
-                    uniquePlaces.add(place);
-                    break;
-                }
-            }
-        }
-        return uniquePlaces;
-    }
 }

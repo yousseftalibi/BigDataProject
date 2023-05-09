@@ -10,7 +10,7 @@ public interface StreetKeywords  {
             "rue", "chemin", "allée", "impasse", "rond-point",
             "passerelle", "esplanade", "chaussée", "voie", "sentier",
             "cours", "pont", "tunnel", "autoroute", "rocade", "périphérique", "route",
-            "nationale", "départementale", "cité", "hôtel", "métro", "boulevard"
+            "départementale", "cité", "hôtel", "métro", "boulevard", "avenue", "maison", "gare", "métro", "Gendarmerie", "école", "hopital"
     );
     List<String> englishStreets = Arrays.asList(
             "street",  "drive", "road", "lane", "terrace",

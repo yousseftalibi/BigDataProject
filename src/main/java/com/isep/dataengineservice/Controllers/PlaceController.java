@@ -1,6 +1,5 @@
 package com.isep.dataengineservice.Controllers;
 
-import com.isep.dataengineservice.Models.GeoPosition;
 import com.isep.dataengineservice.Models.Place;
 import com.isep.dataengineservice.Services.GeoNodeService;
 import com.isep.dataengineservice.Services.PlaceClusteringService;
@@ -10,11 +9,10 @@ import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
-
-import javax.annotation.PostConstruct;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -28,15 +26,52 @@ public class PlaceController {
 
     @Autowired
     GeoNodeService geoNodeService;
-
+    @Autowired
+    KafkaTemplate<String, List<Place>> kafkaPlaceTemplate;
     @GetMapping(value="/api/rawPlaces")
     public List<Place> rawPlaces(@RequestParam Double lon, Double lat ){
+        List<Place> rawPlacesFromPosition = placeService.getRawPlaces(lon, lat);
         return placeService.getRawPlaces(lon, lat);
     }
-    @PostMapping(value="/api/formatPlaces")
-    public List<Place> formattedPlaces(@RequestBody List<Place> places){
-        return placeService.getFormattedPlaces(places);
+
+    //gets clusteredPlaces from rawPlaces
+    @KafkaListener(topics= "rawPlaces", groupId = "new-places-group", containerFactory = "placeListListenerContainerFactory")
+    public void rawPlacesListener(@NotNull ConsumerRecord<String, List<Place>> record){
+        System.out.println("received rawPlaces from GeoNodeController.");
+        List<Place> rawPlacesFromPosition = record.value();
+        List<Place> interestingPlaces = new ArrayList<>();
+        if(!rawPlacesFromPosition.isEmpty()) {
+           interestingPlaces = placeClusteringService.DbscanCluster(rawPlacesFromPosition).get();
+            System.out.println("got interesting places from clusterPlaces() method.");
+        }
+        if(!interestingPlaces.isEmpty()) {
+            System.out.println("sending interesting places to interestingPlacesListener.");
+            kafkaPlaceTemplate.send("interestingPlaces", interestingPlaces);
+        }
     }
+
+    //prints clusteredPlaces from clusteredPlaces --normally we would store in database--
+    @KafkaListener(topics="interestingPlaces", groupId = "places-group", containerFactory = "placeListListenerContainerFactory")
+    public void interestingPlacesListener(@NotNull ConsumerRecord<String, List<Place>> record) throws IOException {
+        System.out.println("received interesetingPlaces from rawPlacesListener in PlaceController");
+        List<Place> interestingPlaces = record.value();
+
+        if(!interestingPlaces.isEmpty()) {
+            File resultFile = new File("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\result"+record.offset()+".txt");
+            BufferedWriter writer = new BufferedWriter(new FileWriter(resultFile.getAbsoluteFile()));
+            System.out.println("processing interesting places.");
+            System.out.println("Interesting Places");
+            interestingPlaces.forEach(clusteredPlace -> {
+                try {
+                    writer.write(clusteredPlace.getName() + "\n");
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+            writer.close();
+        }
+    }
+
     @GetMapping(value="/api/getInterestingPlaces")
     public List<Place> clusterPlaces(@RequestParam @NotNull List<Place> places){
         //2.2945&lat=48.8584
@@ -50,26 +85,7 @@ public class PlaceController {
     //once gotten, kafka listenner that gets raw Places in each
     //once done, kafka listener that clusters list
 
-    @GetMapping(value="/api/logic")
-    public void logic(){
-        GeoPosition Paris = geoNodeService.getGeoPosition("Paris");
-        Set<GeoPosition> geoPositions = geoNodeService.BfsSearchGeoNodes(Paris, new HashSet<>());
-        List<Place> placesInParis = new ArrayList<>();
 
-        geoPositions.forEach(
-                position -> rawPlaces(position.getLon(), position.getLat()).forEach(
-                        place -> placesInParis.add(place)
-                )
-        );
-        List<Place> clusteredPlaces = clusterPlaces(placesInParis);
-        System.out.println("Places");
-        clusteredPlaces.forEach(clusteredPlace -> System.out.println(clusteredPlace.getName()));
-    }
-
-    @KafkaListener(topics= "GeoNodes", groupId = "geoNodes-group")
-    public void listenGeoNode(@NotNull ConsumerRecord<String, GeoPosition> record)  {
-        System.out.println("geo node lon : "+ record.value().getLon());
-    }
 
     /*what airflow will do
         GeoPosition geoPosition = geoPositions("Paris");

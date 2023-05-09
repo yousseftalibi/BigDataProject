@@ -7,6 +7,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.kafka.config.KafkaListenerEndpointRegistry;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -16,10 +17,10 @@ import java.util.*;
 
 public class GeoNodeService {
     @Autowired
-    KafkaTemplate kafkaTemplate;
+    KafkaTemplate<String, GeoPosition> kafkaTemplate;
     private static final int earthRadius = 6371;
     private static final int numberOfDesiredNodes = 100;
-    public Set<GeoPosition> BfsSearchGeoNodes(GeoPosition geoNode, Set<GeoPosition> allGeoNodes) {
+    public Set<GeoPosition> BfsSearchGeoNodes(GeoPosition geoNode, LinkedHashSet<GeoPosition> allGeoNodes) {
         //starts with geoNode and returns a list of 100 geoPositions in 70km radius.
         Queue<GeoPosition> queue = new LinkedList<>();
         geoNode.setDistanceFromStart(0);
