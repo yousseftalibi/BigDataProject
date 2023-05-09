@@ -27,7 +27,7 @@ public class PlaceClusteringService {
     final double NAME_WEIGHT = 1.2;
     final double FEATURE_WEIGHT = 1;
     @NotNull
-    final double EPSILON = 7;
+    final double EPSILON = 5;
     final int MIN_POINTS = 1;
     final int MIN_RATE_FILTERED = 4;
     public Optional<List<Place>> DbscanCluster(List<Place> places) {
