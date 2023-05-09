@@ -28,6 +28,8 @@ import java.util.Map;
 @EnableKafka
 public class KafkaConfig {
 
+    //we need a custom deserializer because Jackson deserializes by defaut to HashSet which causes problemes.
+    //copied from https://stackoverflow.com/a/57737816, thanks to the user: ho yoje
     static class PlaceDeserializer extends JsonDeserializer<List<Place>> {
         public List<Place> deserialize(String topic, Headers headers, byte[] data) {
             return deserialize(topic, data);
