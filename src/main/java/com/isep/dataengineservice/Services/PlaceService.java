@@ -1,14 +1,19 @@
 package com.isep.dataengineservice.Services;
 
 import com.isep.dataengineservice.Models.Place;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -16,6 +21,7 @@ import java.util.stream.Collectors;
 
 @Service
 public class PlaceService {
+
     public List<Place> getRawPlaces(Double lon, Double lat) {
         RestTemplate restTemplate = new RestTemplate();
         String uri = "https://opentripmap-places-v1.p.rapidapi.com/en/places/radius?radius=500&lon="+lon+"&lat="+lat;
@@ -27,5 +33,6 @@ public class PlaceService {
         Place.ApiResponse places = response.getBody();
         return places.getFeatures().stream().map(e -> e.getProperties()).collect(Collectors.toList());
     }
+
 
 }

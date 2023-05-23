@@ -4,7 +4,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
 import java.io.Serializable;
 import java.util.List;
 
@@ -22,13 +21,15 @@ public class Place implements Serializable {
     private String osm;
     private String wikidata;
     private String xid;
+   // private Integer tempsDeVisite;
+   // private Integer visitBudget;
 
     @Data
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public static class Geometry {
+    public static class Geometry implements Serializable{
         private String type;
         private List<Double> coordinates;
     }
@@ -38,7 +39,7 @@ public class Place implements Serializable {
     @NoArgsConstructor
     @AllArgsConstructor
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public static class Feature {
+    public static class Feature implements Serializable{
         private String type;
         private int id;
         private Geometry geometry;
@@ -50,7 +51,7 @@ public class Place implements Serializable {
     @NoArgsConstructor
     @AllArgsConstructor
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public static class ApiResponse {
+    public static class ApiResponse implements Serializable {
         private String type;
         private List<Feature> features;
     }

@@ -35,10 +35,10 @@ public class PlaceController {
     }
 
     //gets clusteredPlaces from rawPlaces
-    @KafkaListener(topics= "rawPlaces", groupId = "new-places-group", containerFactory = "placeListListenerContainerFactory")
+  /*  @KafkaListener(topics= "rawPlaces", groupId = "new-places-group", containerFactory = "placeListListenerContainerFactory")
     public void rawPlacesListener(@NotNull ConsumerRecord<String, List<Place>> record){
         System.out.println("received rawPlaces from GeoNodeController.");
-        List<Place> rawPlacesFromPosition = record.value();
+        List<Place> rawPlacesFromPosition = record.value().stream().collect(Collectors.toList());
         List<Place> interestingPlaces = new ArrayList<>();
         if(!rawPlacesFromPosition.isEmpty()) {
            interestingPlaces = placeClusteringService.DbscanCluster(rawPlacesFromPosition).get();
@@ -48,7 +48,7 @@ public class PlaceController {
             System.out.println("sending interesting places to interestingPlacesListener.");
             kafkaPlaceTemplate.send("interestingPlaces", interestingPlaces);
         }
-    }
+    }*/
 
     //prints clusteredPlaces from clusteredPlaces --normally we would store in database--
     @KafkaListener(topics="interestingPlaces", groupId = "places-group", containerFactory = "placeListListenerContainerFactory")
@@ -70,15 +70,6 @@ public class PlaceController {
             });
             writer.close();
         }
-    }
-
-    @GetMapping(value="/api/getInterestingPlaces")
-    public List<Place> clusterPlaces(@RequestParam @NotNull List<Place> places){
-        //2.2945&lat=48.8584
-        //List<Place> places = rawPlaces(2.2945, 48.8584);
-        List<Place> clusteredPlaces  = placeClusteringService.DbscanCluster(places).get().stream().filter(place -> place.getRate()>=5 && ! (place.getName().toLowerCase().contains("rue") || place.getName().toLowerCase().contains("cour") || place.getName().toLowerCase().contains("immeuble") || place.getName().toLowerCase().contains("street") || place.getName().toLowerCase().contains("way") || place.getName().toLowerCase().contains("house"))).collect(Collectors.toList());
-       // clusteredPlaces.forEach(place -> System.out.println(place.getName()));
-        return clusteredPlaces;
     }
 
     //cron job getting geoPosition

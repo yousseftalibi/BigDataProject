@@ -22,5 +22,4 @@ public class GeoPosition implements Serializable {
     private int population;
     private double distanceFromStart;
 
-
 }
