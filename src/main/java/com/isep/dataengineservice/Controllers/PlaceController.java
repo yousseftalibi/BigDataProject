@@ -1,9 +1,11 @@
 package com.isep.dataengineservice.Controllers;
 
 import com.isep.dataengineservice.Models.Place;
+import com.isep.dataengineservice.Models.User;
 import com.isep.dataengineservice.Services.GeoNodeService;
 import com.isep.dataengineservice.Services.PlaceClusteringService;
 import com.isep.dataengineservice.Services.PlaceService;
+import com.isep.dataengineservice.Services.UserService;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +16,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -23,11 +26,17 @@ public class PlaceController {
     PlaceService placeService;
     @Autowired
     PlaceClusteringService placeClusteringService;
-
     @Autowired
     GeoNodeService geoNodeService;
     @Autowired
     KafkaTemplate<String, List<Place>> kafkaPlaceTemplate;
+    @Autowired
+    UserService userService;
+    @PostMapping(value="/api/getFriends")
+    public List<User> getFriends() throws SQLException {
+        User omayos = userService.getUserById(1);
+        return userService.getFriends(omayos);
+    }
     @GetMapping(value="/api/rawPlaces")
     public List<Place> rawPlaces(@RequestParam Double lon, Double lat ){
         List<Place> rawPlacesFromPosition = placeService.getRawPlaces(lon, lat);
@@ -70,6 +79,12 @@ public class PlaceController {
             });
             writer.close();
         }
+    }
+
+    @GetMapping(value="/api/predictPlaces")
+    public List<Place> predictPlace() throws SQLException  {
+        List<Place> places = userService.predictPlace(userService.getUserById(17));
+        return places;
     }
 
     //cron job getting geoPosition
