@@ -1,108 +1,15 @@
 package com.isep.dataengineservice.Controllers;
 
-import com.isep.dataengineservice.Models.Place;
 import com.isep.dataengineservice.Services.*;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.*;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.sql.SQLException;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @RestController
 public class PlaceController {
-   @Autowired
-    PlaceService placeService;
-    @Autowired
-    PlaceClusteringService placeClusteringService;
-    @Autowired
-    GeoNodeService geoNodeService;
     @Autowired
     RecommendationService recommendationService;
-
-    @Autowired
-    KafkaTemplate<String, List<Place>> kafkaPlaceTemplate;
-    @Autowired
-    PlacesWebSocketHandler placesWebSocketHandler;
-
-
-    @KafkaListener(topics= "rawPlaces", groupId = "new-places-group", containerFactory = "placeListListenerContainerFactory")
-    public void getInterestingPlacesFromRawPlaces(@NotNull ConsumerRecord<String, List<Place>> record){
-        System.out.println("received rawPlaces from GeoNodeController.");
-        List<Place> rawPlacesFromPosition = record.value().stream().collect(Collectors.toList());
-        List<Place> interestingPlaces = new ArrayList<>();
-        if(!rawPlacesFromPosition.isEmpty()) {
-            interestingPlaces = placeClusteringService.DbscanCluster(rawPlacesFromPosition).get();
-            System.out.println("got interesting places from clusterPlaces() method.");
-        }
-
-        if(!interestingPlaces.isEmpty()) {
-            System.out.println("sending interesting places to PlacesWebSocketHandler.");
-
-            // Get the destination from the record key
-            String destination = record.key();
-
-            // Iterate over the interesting places and send each one to PlacesWebSocketHandler
-            for (Place place : interestingPlaces) {
-                placesWebSocketHandler.sendPlace(place, destination);
-            }
-
-        }
-    }
-
-    /*
-    //triggered by getRawPlacesFromGeoPosition by GeoNodeController. It takes each list of rawPlaces and applies dbScan to filter and process it before sending it to "interestingPlaces" using Kafka
-    @KafkaListener(topics= "rawPlaces", groupId = "new-places-group", containerFactory = "placeListListenerContainerFactory")
-    public void getInterestingPlacesFromRawPlacesKafka2(@NotNull ConsumerRecord<String, List<Place>> record){
-        System.out.println("received rawPlaces from GeoNodeController.");
-        List<Place> rawPlacesFromPosition = record.value().stream().collect(Collectors.toList());
-        List<Place> interestingPlaces = new ArrayList<>();
-        if(!rawPlacesFromPosition.isEmpty()) {
-           interestingPlaces = placeClusteringService.DbscanCluster(rawPlacesFromPosition).get();
-            System.out.println("got interesting places from clusterPlaces() method.");
-        }
-        if(!interestingPlaces.isEmpty()) {
-            System.out.println("sending interesting places to interestingPlacesListener.");
-            kafkaPlaceTemplate.send("interestingPlaces", interestingPlaces);
-        }
-    }
-*/
-    public List<Place> getInterestingPlacesFromRawPlaces(List<Place> rawPlacesFromPosition){
-        List<Place> interestingPlaces = new ArrayList<>();
-        if(!rawPlacesFromPosition.isEmpty()) {
-            interestingPlaces = placeClusteringService.DbscanCluster(rawPlacesFromPosition).get();
-        }
-       return interestingPlaces;
-    }
-
-    //is triggered by "interestingPlaces" kafka, in the function above getInterestingPlacesFromRawPlaces. This function takes each Place and prints it. In the future it should save it in gcp cloud.
-    @KafkaListener(topics="interestingPlaces", groupId = "places-group", containerFactory = "placeListListenerContainerFactory")
-    public void storeInterestingPlaces(@NotNull ConsumerRecord<String, List<Place>> record) throws IOException {
-        System.out.println("received interesetingPlaces from rawPlacesListener in PlaceController");
-        List<Place> interestingPlaces = record.value();
-
-        if(!interestingPlaces.isEmpty()) {
-            File resultFile = new File("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\result"+record.offset()+".txt");
-            BufferedWriter writer = new BufferedWriter(new FileWriter(resultFile.getAbsoluteFile()));
-            System.out.println("processing interesting places.");
-            System.out.println("Interesting Places");
-            interestingPlaces.forEach(clusteredPlace -> {
-                try {
-                    writer.write(clusteredPlace.getName() + "\n");
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            });
-            writer.close();
-        }
-    }
 
    @GetMapping(value="/api/recommendDestination/{userId}")
     public List<String> recommendDestination(@PathVariable("userId") int userId) throws SQLException  {

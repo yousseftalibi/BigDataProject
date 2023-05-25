@@ -1,16 +1,21 @@
 package com.isep.dataengineservice.Services;
 
 import com.isep.dataengineservice.Models.GeoPosition;
+import com.isep.dataengineservice.Models.Place;
+import com.isep.dataengineservice.Services.Place.PlaceService;
 import lombok.var;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
-import org.springframework.kafka.config.KafkaListenerEndpointRegistry;
+import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+
 import java.util.*;
 
 @Service
@@ -22,10 +27,17 @@ public class GeoNodeService {
     private static final int earthRadius = 6371;
 
     //number of position desired, the larger, the more places we get
-    private static final int numberOfDesiredNodes = 100;
+    private static final int numberOfDesiredNodes = 500;
 
     // 70km maximum distance between initial point and the found geoNode
-    private static final int maxDistance = 100000;
+    private static final int maxDistance = 500000;
+    public static Boolean stop = Boolean.FALSE;
+    @Autowired
+    PlaceService placeService;
+
+    @Autowired
+    KafkaTemplate<String, List<Place>> kafkaPlaceTemplate;
+
     public Set<GeoPosition> BfsSearchGeoNodes(GeoPosition geoNode, LinkedHashSet<GeoPosition> allGeoNodes) {
         //starts with geoNode and returns a list of geoPositions in a radius.
         Queue<GeoPosition> queue = new LinkedList<>();
@@ -120,13 +132,39 @@ public class GeoNodeService {
         RestTemplate restTemplate = new RestTemplate();
         String uri = "https://opentripmap-places-v1.p.rapidapi.com/en/places/geoname?name="+city;
         HttpHeaders headers = new HttpHeaders();
-        headers.add("X-RapidAPI-Key", "6a4f81847bmsh8785c9220ccebdfp1b97bfjsn74f82815c241");
+        //headers.add("X-RapidAPI-Key", "6a4f81847bmsh8785c9220ccebdfp1b97bfjsn74f82815c241");
+        //headers.add("X-RapidAPI-Key", "01f3cd1780mshb2b87fa150c52f3p195ac3jsn0517fb556b09");
+        headers.add("X-RapidAPI-Key", "c4d4c4a3afmsh8073c2210da8497p1bf278jsne8174b51a3ec");
+
         headers.add("X-RapidAPI-Host", "opentripmap-places-v1.p.rapidapi.com");
         HttpEntity<String> requestEntity = new HttpEntity<>(headers);
         ResponseEntity<GeoPosition> response = restTemplate.exchange(uri, HttpMethod.GET, requestEntity, GeoPosition.class);
         GeoPosition geoPosition = response.getBody();
         return geoPosition;
     }
+
+
+    //triggered by BfsSearchGeoNodes in getAllGeoPositionsFromBfsAlgo, for each geoPosition with get list of places from RapidAPI and send it to "rawPlace"
+    //in kafka tha triggers getInterestingPlacesFromRawPlaces()
+    @KafkaListener(topics= "GeoNodes", containerFactory = "geoPositionListenerContainerFactory")
+    public void getRawPlacesFromGeoPositionKafka(@NotNull ConsumerRecord<String, GeoPosition> record)  {
+        if(stop){
+            return;
+        }
+        GeoPosition currentGeoPosition = record.value();
+        System.out.println("received geoNodes from GeoNodeService.");
+        List<Place> rawPlacesFromPosition = placeService.getRawPlaces(currentGeoPosition.getLon(), currentGeoPosition.getLat());
+        System.out.println("Got rawPlaces from that geoNode. Sending to rawPlacesController.");
+        if(!rawPlacesFromPosition.isEmpty()){
+            kafkaPlaceTemplate.send("rawPlaces", rawPlacesFromPosition);
+        }
+    }
+
+    public Set<GeoPosition> getAllGeoPositionsFromBfsAlgo(String PlaceName){
+        GeoPosition geoPosition = getGeoPosition(PlaceName);
+        return BfsSearchGeoNodes(geoPosition, new LinkedHashSet<>());
+    }
+
 
 
 }

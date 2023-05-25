@@ -117,7 +117,6 @@ public class RecommendationService {
                 .orderBy(col("prediction").desc())
                 .limit(N);
 
-
         return topPlaces.select("item").as(Encoders.STRING()).collectAsList().stream()
                 .collect(Collectors.toList());
 

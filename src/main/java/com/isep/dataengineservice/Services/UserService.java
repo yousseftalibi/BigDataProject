@@ -1,26 +1,17 @@
 package com.isep.dataengineservice.Services;
 
-import javax.transaction.Transactional;
-
 import com.isep.dataengineservice.Models.User;
 import com.isep.dataengineservice.Repository.UserRepository;
-import org.apache.spark.SparkConf;
-import org.apache.spark.ml.recommendation.ALS;
-import org.apache.spark.ml.recommendation.ALSModel;
-import org.apache.spark.sql.*;
-import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.Metadata;
-import org.apache.spark.sql.types.StructField;
-import org.apache.spark.sql.types.StructType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
-import java.sql.*;
-import java.util.*;
-import java.util.stream.Collectors;
-
-import static org.apache.spark.sql.functions.col;
+import javax.transaction.Transactional;
+import java.sql.Array;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 @Service
 @Transactional
@@ -39,7 +30,6 @@ public class UserService {
     public List<Integer> getUserFriendIds(User user) throws SQLException{
         return userRepository.getUserFriendIds(user);
     }
-
 
     public List<String> getUserPlaces(User user) throws SQLException {
 

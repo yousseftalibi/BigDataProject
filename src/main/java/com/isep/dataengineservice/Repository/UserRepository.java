@@ -8,7 +8,6 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Repository;
 import lombok.var;
-
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,7 +18,6 @@ public class UserRepository {
     PasswordEncoder passwordEncoder;
     @Autowired
     Connection connection;
-
 
     public User getUserById(int id) throws SQLException{
         String query = "SELECT * FROM users WHERE id = ?";

@@ -1,7 +1,8 @@
-package com.isep.dataengineservice.Services;
+package com.isep.dataengineservice.Services.Place;
 
 import com.isep.dataengineservice.Models.Place;
 import com.isep.dataengineservice.Models.StreetKeywords;
+import com.isep.dataengineservice.Services.LevenshteinDistanceMeasure;
 import org.apache.commons.math3.ml.clustering.Cluster;
 import org.apache.commons.math3.ml.clustering.DBSCANClusterer;
 import org.apache.commons.math3.ml.clustering.DoublePoint;

@@ -1,6 +1,6 @@
 package com.isep.dataengineservice.Config;
 
-import com.isep.dataengineservice.Services.PlacesWebSocketHandler;
+import com.isep.dataengineservice.Services.Place.PlacesWebSocketHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;

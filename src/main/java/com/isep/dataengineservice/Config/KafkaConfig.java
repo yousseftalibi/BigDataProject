@@ -3,7 +3,6 @@ package com.isep.dataengineservice.Config;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.isep.dataengineservice.Models.GeoPosition;
 import com.isep.dataengineservice.Models.Place;
-import com.isep.dataengineservice.Services.GeoNodeService;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.errors.SerializationException;
@@ -14,11 +13,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
-import org.springframework.kafka.config.KafkaListenerEndpointRegistry;
 import org.springframework.kafka.core.*;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.kafka.support.serializer.JsonSerializer;
-
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -54,6 +51,7 @@ public class KafkaConfig {
         params.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "192.168.104.249:9092");
         params.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         params.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+
         return params;
     }
 
@@ -61,8 +59,7 @@ public class KafkaConfig {
         Map<String, Object> params = new HashMap<>();
         params.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "192.168.104.249:9092");
         params.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-        params.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
-        params.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true");
+        params.put(ConsumerConfig.GROUP_ID_CONFIG, "consumerStaticId" + java.time.LocalDateTime.now());
         return params;
     }
 
@@ -99,7 +96,6 @@ public class KafkaConfig {
     public ConsumerFactory<String, List<Place>> placeListConsumerFactory() {
         JsonDeserializer<List<Place>> deserializer = new PlaceDeserializer();
         deserializer.addTrustedPackages("*");
-
         return new DefaultKafkaConsumerFactory<>(consumerParams(), new StringDeserializer(), deserializer);
     }
 
