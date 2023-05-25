@@ -1,11 +1,7 @@
 package com.isep.dataengineservice.Controllers;
 
 import com.isep.dataengineservice.Models.Place;
-import com.isep.dataengineservice.Models.User;
-import com.isep.dataengineservice.Services.GeoNodeService;
-import com.isep.dataengineservice.Services.PlaceClusteringService;
-import com.isep.dataengineservice.Services.PlaceService;
-import com.isep.dataengineservice.Services.UserService;
+import com.isep.dataengineservice.Services.*;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,30 +18,21 @@ import java.util.stream.Collectors;
 
 @RestController
 public class PlaceController {
-    @Autowired
+   @Autowired
     PlaceService placeService;
     @Autowired
     PlaceClusteringService placeClusteringService;
     @Autowired
     GeoNodeService geoNodeService;
     @Autowired
-    KafkaTemplate<String, List<Place>> kafkaPlaceTemplate;
-    @Autowired
-    UserService userService;
-    @PostMapping(value="/api/getFriends")
-    public List<User> getFriends() throws SQLException {
-        User omayos = userService.getUserById(1);
-        return userService.getFriends(omayos);
-    }
-    @GetMapping(value="/api/rawPlaces")
-    public List<Place> rawPlaces(@RequestParam Double lon, Double lat ){
-        List<Place> rawPlacesFromPosition = placeService.getRawPlaces(lon, lat);
-        return placeService.getRawPlaces(lon, lat);
-    }
+    RecommendationService recommendationService;
 
-    //gets clusteredPlaces from rawPlaces
-  /*  @KafkaListener(topics= "rawPlaces", groupId = "new-places-group", containerFactory = "placeListListenerContainerFactory")
-    public void rawPlacesListener(@NotNull ConsumerRecord<String, List<Place>> record){
+    @Autowired
+    KafkaTemplate<String, List<Place>> kafkaPlaceTemplate;
+
+    //triggered by getRawPlacesFromGeoPosition by GeoNodeController. It takes each list of rawPlaces and applies dbScan to filter and process it before sending it to "interestingPlaces" using Kafka
+    @KafkaListener(topics= "rawPlaces", groupId = "new-places-group", containerFactory = "placeListListenerContainerFactory")
+    public void getInterestingPlacesFromRawPlacesKafka(@NotNull ConsumerRecord<String, List<Place>> record){
         System.out.println("received rawPlaces from GeoNodeController.");
         List<Place> rawPlacesFromPosition = record.value().stream().collect(Collectors.toList());
         List<Place> interestingPlaces = new ArrayList<>();
@@ -57,11 +44,19 @@ public class PlaceController {
             System.out.println("sending interesting places to interestingPlacesListener.");
             kafkaPlaceTemplate.send("interestingPlaces", interestingPlaces);
         }
-    }*/
+    }
 
-    //prints clusteredPlaces from clusteredPlaces --normally we would store in database--
+    public List<Place> getInterestingPlacesFromRawPlaces(List<Place> rawPlacesFromPosition){
+        List<Place> interestingPlaces = new ArrayList<>();
+        if(!rawPlacesFromPosition.isEmpty()) {
+            interestingPlaces = placeClusteringService.DbscanCluster(rawPlacesFromPosition).get();
+        }
+       return interestingPlaces;
+    }
+
+    //is triggered by "interestingPlaces" kafka, in the function above getInterestingPlacesFromRawPlaces. This function takes each Place and prints it. In the future it should save it in gcp cloud.
     @KafkaListener(topics="interestingPlaces", groupId = "places-group", containerFactory = "placeListListenerContainerFactory")
-    public void interestingPlacesListener(@NotNull ConsumerRecord<String, List<Place>> record) throws IOException {
+    public void storeInterestingPlaces(@NotNull ConsumerRecord<String, List<Place>> record) throws IOException {
         System.out.println("received interesetingPlaces from rawPlacesListener in PlaceController");
         List<Place> interestingPlaces = record.value();
 
@@ -81,12 +76,13 @@ public class PlaceController {
         }
     }
 
-    @GetMapping(value="/api/predictPlaces")
-    public List<Place> predictPlace() throws SQLException  {
-        List<Place> places = userService.predictPlace(userService.getUserById(17));
-        return places;
+   @GetMapping(value="/api/recommendDestination/{userId}")
+    public List<String> recommendDestination(@PathVariable("userId") int userId) throws SQLException  {
+        List<String> recommendedPlaces = recommendationService.predictPlace(userId);
+        return recommendedPlaces;
     }
 
+    /* 
     //cron job getting geoPosition
     //once gotten, kafka listenner that gets raw Places in each
     //once done, kafka listener that clusters list
@@ -108,5 +104,6 @@ public class PlaceController {
     //controller to return sentiment analysis
     //controller to store sentiment analysis in data lake
     //controller to index in elastic
+    
 
 }

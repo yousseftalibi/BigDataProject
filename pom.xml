@@ -15,7 +15,7 @@
     <description>DataEngineService</description>
     <properties>
         <java.version>1.8</java.version>
-    </properties>
+</properties>
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -83,20 +83,13 @@
             <version>42.2.23</version>
         </dependency>
 
+
         <dependency>
             <groupId>org.codehaus.janino</groupId>
             <artifactId>janino</artifactId>
             <version>3.0.16</version>
         </dependency>
 
-
     </dependencies>
-
-    <build>
-        <plugins>
-
-
-        </plugins>
-    </build>
 
 </project>

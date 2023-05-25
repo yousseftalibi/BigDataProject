@@ -25,6 +25,7 @@ import java.util.stream.IntStream;
 
 @Service
 public class PlaceClusteringService {
+
     SparkConf sparkConf = new SparkConf().set("spark.ui.port", "3000");
     SparkSession spark = SparkSession.builder().config(sparkConf).appName("clustering").master("local[*]").getOrCreate();
     JavaSparkContext jsc = new JavaSparkContext(spark.sparkContext());
@@ -35,29 +36,11 @@ public class PlaceClusteringService {
     @NotNull
     final double EPSILON = 5;
     final int MIN_POINTS = 1;
-    static final int MIN_RATE_FILTERED = 4;
 
-    @Autowired
-    KafkaTemplate<String, List<Place>> kafkaPlaceTemplate;
-    @KafkaListener(topics= "rawPlaces", groupId = "new-places-group", containerFactory = "placeListListenerContainerFactory")
-    public void rawPlacesListener(@NotNull ConsumerRecord<String, List<Place>> record){
-        System.out.println("received rawPlaces from GeoNodeController.");
-        List<Place> rawPlacesFromPosition = record.value().stream().collect(Collectors.toList());
-        List<Place> interestingPlaces = new ArrayList<>();
-        if(!rawPlacesFromPosition.isEmpty()) {
-            interestingPlaces = DbscanCluster(rawPlacesFromPosition).get();
-            System.out.println("got interesting places from clusterPlaces() method.");
-        }
-        if(!interestingPlaces.isEmpty()) {
-            System.out.println("sending interesting places to interestingPlacesListener.");
-            kafkaPlaceTemplate.send("interestingPlaces", interestingPlaces);
-        }
-    }
     public Optional<List<Place>> DbscanCluster(List<Place> places) {
         JavaRDD<Place> placesRDD = getPlacesRDD(places);
         JavaRDD<Place> placesNormalized = normalize(placesRDD);
-        JavaRDD<Place> placesFiltered = filterStreetPlaces(placesNormalized);
-        JavaRDD<Place> placesNormalizedDistancesAndRates = normalizeDistancesAndRates(placesFiltered);
+        JavaRDD<Place> placesNormalizedDistancesAndRates = normalizeDistancesAndRates(placesNormalized);
 
         List<double[]> placeFeatures = placesNormalizedDistancesAndRates.map(place -> new double[]{place.getDist(), place.getRate()}).collect();
 
@@ -88,33 +71,6 @@ public class PlaceClusteringService {
         }
         //jsc.close();
         return Optional.of(uniquePlaces);
-    }
-    private static boolean containsStreetKeyword(String placeName) {
-        List<List<String>> allStreetKeywords = Arrays.asList(
-                StreetKeywords.frenchStreets,
-                StreetKeywords.arabicStreets,
-                StreetKeywords.afrikaansStreets,
-                StreetKeywords.chineseStreets,
-                StreetKeywords.dutchStreets,
-                StreetKeywords.englishStreets,
-                StreetKeywords.greekStreets,
-                StreetKeywords.germanStreets,
-                StreetKeywords.hindiStreets,
-                StreetKeywords.italianStreets,
-                StreetKeywords.japaneseStreets,
-                StreetKeywords.spanishStreets,
-                StreetKeywords.swedishStreets,
-                StreetKeywords.swahiliStreets,
-                StreetKeywords.portugueseStreets,
-                StreetKeywords.polishStreets
-        );
-
-        return allStreetKeywords.stream().anyMatch(keywords -> keywords.stream().anyMatch(placeName::contains));
-    }
-    private static JavaRDD<Place> filterStreetPlaces(JavaRDD<Place> places) {
-        return places
-                .filter(place -> place.getRate() >= MIN_RATE_FILTERED)
-                .filter(place -> !containsStreetKeyword(place.getName()));
     }
 
     private JavaRDD<Place> getPlacesRDD(List<Place> places) {
@@ -150,10 +106,11 @@ public class PlaceClusteringService {
     private JavaRDD<Place> normalize(JavaRDD<Place> places) {
         return places.map(place -> {
             String name = StringUtils.stripAccents(place.getName()).toLowerCase();
-            name = name.replaceAll("[^a-zA-Z0-9]+", "");
+            name = name.replaceAll("[^a-zA-Z0-9]+", " ").trim();
             return Place.builder().name(name).dist(place.getDist()).rate(place.getRate()).build();
         });
     }
+
     private static JavaRDD<Place> normalizeDistancesAndRates(JavaRDD<Place> places) {
         //since distance & rates are of different scales, distances can be huge and rate go from 1 to 7, we must bring them to the same scale.
         //we do this with standarization, the formula is: (x - moyenne) / écartType.
@@ -164,6 +121,5 @@ public class PlaceClusteringService {
         return places.map(place -> Place.builder().name(place.getName()).dist(standarize(distances, place.getDist())).rate(standarize(rates, (double) place.getRate()).intValue() ).build()
         );
     }
-
 
 }

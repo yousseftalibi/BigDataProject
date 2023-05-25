@@ -16,17 +16,21 @@ import java.util.*;
 @Service
 
 public class GeoNodeService {
+
     @Autowired
     KafkaTemplate<String, GeoPosition> kafkaTemplate;
     private static final int earthRadius = 6371;
-    private static final int numberOfDesiredNodes = 100;
+
+    //number of position desired, the larger, the more places we get
+    private static final int numberOfDesiredNodes = 400;
+
+    // 70km maximum distance between initial point and the found geoNode
+    private static final int maxDistance = 200000;
     public Set<GeoPosition> BfsSearchGeoNodes(GeoPosition geoNode, LinkedHashSet<GeoPosition> allGeoNodes) {
-        //starts with geoNode and returns a list of 100 geoPositions in 70km radius.
+        //starts with geoNode and returns a list of geoPositions in a radius.
         Queue<GeoPosition> queue = new LinkedList<>();
         geoNode.setDistanceFromStart(0);
         queue.add(geoNode);
-
-        int maxDistance = 70000; // 70km maximum distance between initial point and the found geoNode
 
         while (!queue.isEmpty() && allGeoNodes.size() < numberOfDesiredNodes) {
             GeoPosition currentNode = queue.poll();
@@ -41,7 +45,7 @@ public class GeoNodeService {
                 );
 
                 if (isFarEnough && distanceFromStart <= maxDistance && !allGeoNodes.contains(position)) {
-                    kafkaTemplate.send("GeoNodes", position);
+                   // kafkaTemplate.send("GeoNodes", position);
                     allGeoNodes.add(position);
                     queue.add(position);
                 }
@@ -123,5 +127,6 @@ public class GeoNodeService {
         GeoPosition geoPosition = response.getBody();
         return geoPosition;
     }
+
 
 }

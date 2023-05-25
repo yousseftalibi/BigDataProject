@@ -19,6 +19,7 @@ import java.util.Set;
 @RestController
 
 public class GeoNodeController {
+
     @Autowired
     GeoNodeService geoNodeService;
     @Autowired
@@ -29,21 +30,24 @@ public class GeoNodeController {
     KafkaTemplate<String, List<Place>> kafkaPlaceTemplate;
 
 
+    //we give the name of a city and use RapidAPI to get its geoPosition (lon, lat). It's used mainly as a private function but we added endpoint just in case.
     @GetMapping(value="/api/GeoPositions/{city}")
-    public GeoPosition geoPositions(@PathVariable String city){
+    public GeoPosition getGeoPositionsFromRapidApi(@PathVariable String city){
         return geoNodeService.getGeoPosition(city);
     }
 
-    @GetMapping(value="/api/allGeoPositions")
-    public Set<GeoPosition> allGeoPositions(/*@RequestParam GeoPosition _geoPosition*/){
-        GeoPosition geoPosition = geoPositions("Paris");
+    //starting point, we give the name of a place and we get geoPosition from method getGeoPositionsFromRapidApi then we use BfsSearchGeoNodes to returns a list of (lon, lat)
+   // the BfsSearchGeoNodes writes in a "GeoNodes" Kafka topic that triggers getRawPlacesFromGeoPosition for each geoPosition
+    @GetMapping(value="/api/allGeoPositions/{PlaceName}")
+    public Set<GeoPosition> getAllGeoPositionsFromBfsAlgo(@PathVariable String PlaceName){
+        GeoPosition geoPosition = getGeoPositionsFromRapidApi(PlaceName);
         return geoNodeService.BfsSearchGeoNodes(geoPosition, new LinkedHashSet<>());
     }
 
-
-    //gets geoNodes and sends rawPlaces
+    //triggered by BfsSearchGeoNodes in getAllGeoPositionsFromBfsAlgo, for each geoPosition with get list of places from RapidAPI and send it to "rawPlace"
+    //in kafka tha triggers getInterestingPlacesFromRawPlaces() in PlaceController
     @KafkaListener(topics= "GeoNodes", groupId = "geoNodes-group", containerFactory = "geoPositionListenerContainerFactory")
-    public void listenGeoNode(@NotNull ConsumerRecord<String, GeoPosition> record)  {
+    public void getRawPlacesFromGeoPositionKafka(@NotNull ConsumerRecord<String, GeoPosition> record)  {
         GeoPosition currentGeoPosition = record.value();
         System.out.println("received geoNodes from GeoNodeService.");
         List<Place> rawPlacesFromPosition = placeService.getRawPlaces(currentGeoPosition.getLon(), currentGeoPosition.getLat());
@@ -51,6 +55,11 @@ public class GeoNodeController {
         if(!rawPlacesFromPosition.isEmpty()){
             kafkaPlaceTemplate.send("rawPlaces", rawPlacesFromPosition);
         }
+    }
+
+    public List<Place> getRawPlacesFromGeoPosition(GeoPosition currentGeoPosition)  {
+        List<Place> rawPlacesFromPosition = placeService.getRawPlaces(currentGeoPosition.getLon(), currentGeoPosition.getLat());
+       return rawPlacesFromPosition;
     }
 
 
@@ -70,5 +79,5 @@ public class GeoNodeController {
     //controller to return sentiment analysis
     //controller to store sentiment analysis in data lake
     //controller to index in elastic
-
+ 
 }
