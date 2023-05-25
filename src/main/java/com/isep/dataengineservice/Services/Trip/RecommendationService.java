@@ -1,7 +1,9 @@
-package com.isep.dataengineservice.Services;
+package com.isep.dataengineservice.Services.Trip;
 
-import com.isep.dataengineservice.Models.User;
-import com.isep.dataengineservice.Repository.UserRepository;
+import com.isep.dataengineservice.Models.Trip.Place;
+import com.isep.dataengineservice.Models.User.User;
+import com.isep.dataengineservice.Repository.TripRepository;
+import com.isep.dataengineservice.Services.User.UserService;
 import org.apache.spark.SparkConf;
 import org.apache.spark.ml.recommendation.ALS;
 import org.apache.spark.ml.recommendation.ALSModel;
@@ -25,6 +27,8 @@ public class RecommendationService {
     SparkSession spark = SparkSession.builder().config(sparkConf).appName("clustering").master("local[*]").getOrCreate();
     @Autowired
     UserService userService;
+    @Autowired
+    TripService tripService;
 
     private List<Integer> parsePlaces(String places) {
         List<Integer> placeList = new ArrayList<>();
@@ -35,7 +39,7 @@ public class RecommendationService {
         return placeList;
     }
 
-    public List<String> predictPlace(Integer userId) throws SQLException {
+    public List<Place> predictPlace(Integer userId) throws SQLException {
 
         /*
 
@@ -43,39 +47,27 @@ public class RecommendationService {
         INSERT INTO users (username, password, places) VALUES ('userB', 'pass', '{20,21,23,24}');
         if userA is friend's with userB and we try to recommend userA a destination, the algorithm predicts 24. not just because it is the missing value.
          */
+        List<Place> recommendedPlaces = new ArrayList<>();
 
         User user = userService.getUserById(userId);
+        List<User> friends =  userService.getFriends(user);
 
-        List<Integer> friendsIds = userService.getUserFriendIds(user);
-
-        List<User> friends = new ArrayList<>();
-        friendsIds.forEach( friendId -> {
-            try {
-
-                friends.add(userService.getUserById(friendId));
-
-            } catch (SQLException e) {
-                throw new RuntimeException(e);
-            }
-        });
-
-        List<String> friendsVisitedPlacesString = new ArrayList<>();
+        List<String> friendsVisitedPlacesIdsString = new ArrayList<>();
         friends.forEach(friend -> {
             try {
-                friendsVisitedPlacesString.addAll(userService.getUserPlaces(friend));
+                friendsVisitedPlacesIdsString.addAll(userService.getUserPlacesIds(friend));
 
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             }
-
         });
 
-        List<Integer> friendsVisitedPlaces = new ArrayList<>();
-        friendsVisitedPlacesString.forEach(visitedPlace -> friendsVisitedPlaces.add(Integer.parseInt(visitedPlace)));
+        List<Integer> friendsVisitedPlacesIdsInteger = new ArrayList<>();
+        friendsVisitedPlacesIdsString.forEach(visitedPlace -> friendsVisitedPlacesIdsInteger.add(Integer.parseInt(visitedPlace)));
 
 
         Map<Integer, Integer> placeFrequencies = new HashMap<>();
-        for (Integer placeId : friendsVisitedPlaces) {
+        for (Integer placeId : friendsVisitedPlacesIdsInteger) {
             placeFrequencies.put(placeId, placeFrequencies.getOrDefault(placeId, 0) + 1);
         }
 
@@ -117,9 +109,17 @@ public class RecommendationService {
                 .orderBy(col("prediction").desc())
                 .limit(N);
 
-        return topPlaces.select("item").as(Encoders.STRING()).collectAsList().stream()
-                .collect(Collectors.toList());
 
+        List<String> PlacesIds = topPlaces.select("item").as(Encoders.STRING()).collectAsList().stream().collect(Collectors.toList());
+
+        PlacesIds.forEach(place -> {
+            try {
+                recommendedPlaces.add(tripService.getPlaceById(place));
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        });
+        return recommendedPlaces;
     }
 
 

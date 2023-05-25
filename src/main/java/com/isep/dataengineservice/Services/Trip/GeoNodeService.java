@@ -1,8 +1,7 @@
-package com.isep.dataengineservice.Services;
+package com.isep.dataengineservice.Services.Trip;
 
-import com.isep.dataengineservice.Models.GeoPosition;
-import com.isep.dataengineservice.Models.Place;
-import com.isep.dataengineservice.Services.Place.PlaceService;
+import com.isep.dataengineservice.Models.Trip.GeoPosition;
+import com.isep.dataengineservice.Models.Trip.Place;
 import lombok.var;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.jetbrains.annotations.NotNull;
@@ -33,7 +32,7 @@ public class GeoNodeService {
     private static final int maxDistance = 500000;
     public static Boolean stop = Boolean.FALSE;
     @Autowired
-    PlaceService placeService;
+    TripService tripService;
 
     @Autowired
     KafkaTemplate<String, List<Place>> kafkaPlaceTemplate;
@@ -153,7 +152,7 @@ public class GeoNodeService {
         }
         GeoPosition currentGeoPosition = record.value();
         System.out.println("received geoNodes from GeoNodeService.");
-        List<Place> rawPlacesFromPosition = placeService.getRawPlaces(currentGeoPosition.getLon(), currentGeoPosition.getLat());
+        List<Place> rawPlacesFromPosition = tripService.getRawPlaces(currentGeoPosition.getLon(), currentGeoPosition.getLat());
         System.out.println("Got rawPlaces from that geoNode. Sending to rawPlacesController.");
         if(!rawPlacesFromPosition.isEmpty()){
             kafkaPlaceTemplate.send("rawPlaces", rawPlacesFromPosition);

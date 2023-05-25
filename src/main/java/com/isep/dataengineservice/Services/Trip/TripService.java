@@ -1,8 +1,11 @@
-package com.isep.dataengineservice.Services.Place;
+package com.isep.dataengineservice.Services.Trip;
 
-import com.isep.dataengineservice.Models.GeoPosition;
-import com.isep.dataengineservice.Models.Place;
-import com.isep.dataengineservice.Models.StreetKeywords;
+import com.isep.dataengineservice.Models.Trip.GeoPosition;
+import com.isep.dataengineservice.Models.Trip.Place;
+import com.isep.dataengineservice.Models.Trip.StreetKeywords;
+import com.isep.dataengineservice.Models.User.User;
+import com.isep.dataengineservice.Repository.TripRepository;
+import com.isep.dataengineservice.Services.User.UserService;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,27 +17,30 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-public class PlaceService {
+public class TripService {
     @Autowired
-    PlacesWebSocketHandler placesWebSocketHandler;
+    TripWebSocketHandler tripWebSocketHandler;
     @Autowired
     PlaceClusteringService placeClusteringService;
+    @Autowired
+    TripRepository tripRepository;
+    @Autowired
+    UserService userService;
     @Autowired
     KafkaTemplate<String, List<Place>> kafkaPlaceTemplate;
     private final List<String> allStreetKeywords = new ArrayList<>();
     static final int MIN_RATE_FILTERED = 4;
     public static Boolean stop = Boolean.FALSE;
-
 
     public List<Place> getRawPlaces(Double lon, Double lat) {
         RestTemplate restTemplate = new RestTemplate();
@@ -78,7 +84,6 @@ public class PlaceService {
                 .collect(Collectors.toList());
     }
 
-
     public List<Place> getRawPlacesFromGeoPosition(GeoPosition currentGeoPosition)  {
         List<Place> rawPlacesFromPosition = getRawPlaces(currentGeoPosition.getLon(), currentGeoPosition.getLat());
         return rawPlacesFromPosition;
@@ -97,7 +102,7 @@ public class PlaceService {
 
         if(!interestingPlaces.isEmpty()) {
             for (Place place : interestingPlaces) {
-                placesWebSocketHandler.sendPlace(place);
+                tripWebSocketHandler.sendPlace(place);
             }
         }
     }
@@ -129,6 +134,32 @@ public class PlaceService {
             });
             writer.close();
         }
+    }
+    public Place getPlaceById(String xid) throws SQLException {
+        return tripRepository.getPlaceById(xid);
+    }
+
+    public List<Place> getUserPlaces(int userId) throws SQLException {
+        User user = userService.getUserById(userId);
+        List<String> placesIds = userService.getUserPlacesIds(user);
+        List<Place> places = new ArrayList<>();
+        placesIds.forEach(id -> {
+            try {
+                places.add(getPlaceById(id));
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        });
+        return places;
+    }
+    public void visitPlace(Integer userId, Place place) throws SQLException {
+      //  User omayos = _userRepository.getUserById(userId);
+        Place place1 = Place.builder().xid("110").rate(7).kinds("monument").build();
+
+        if(!tripRepository.placeAlreadyExists(place)) {
+            tripRepository.addPlaceToVisitedPlaces(place);
+        }
+        tripRepository.addVisitedToUser(userId, place);
     }
 
 

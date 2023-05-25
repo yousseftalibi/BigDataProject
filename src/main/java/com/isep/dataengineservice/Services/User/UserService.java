@@ -1,7 +1,8 @@
-package com.isep.dataengineservice.Services;
+package com.isep.dataengineservice.Services.User;
 
-import com.isep.dataengineservice.Models.User;
+import com.isep.dataengineservice.Models.User.User;
 import com.isep.dataengineservice.Repository.UserRepository;
+import lombok.var;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -31,8 +32,19 @@ public class UserService {
         return userRepository.getUserFriendIds(user);
     }
 
-    public List<String> getUserPlaces(User user) throws SQLException {
-
+    public List<User> getFriends(User user) throws SQLException{
+        List<Integer> friendsIds = getUserFriendIds(user);
+        List<User> friends = new ArrayList<>();
+        friendsIds.forEach( id -> {
+            try {
+                friends.add(getUserById(id));
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        });
+        return friends;
+    }
+    public List<String> getUserPlacesIds(User user) throws SQLException {
             Array sqlArray = userRepository.getVisitedPlaces(user);
             if(sqlArray == null){
                 return new ArrayList<>();
@@ -42,5 +54,18 @@ public class UserService {
             return visitedPlaces;
     }
 
+    public Boolean loginUser(User user) throws SQLException {
+        var existingUser = userRepository.getUserById(user.getId());
+        return existingUser != null && (passwordEncoder.matches(user.getPassword(), existingUser.getPassword()));
+    }
+    public boolean usernameTaken(String username) throws SQLException {
+        return userRepository.usernameAlreadyTaken(username) ;
+    }
+    public Boolean registerUser(String username, String password) throws SQLException {
+        userRepository.registerUser(username, password);
+        return userRepository.getUserByUsername(username) != null;
+    }
 
 }
+
+

@@ -1,8 +1,7 @@
-package com.isep.dataengineservice.Services.Place;
+package com.isep.dataengineservice.Services.Trip;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.isep.dataengineservice.Models.Place;
-import com.isep.dataengineservice.Services.GeoNodeService;
+import com.isep.dataengineservice.Models.Trip.Place;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.*;
@@ -10,7 +9,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
-public class PlacesWebSocketHandler implements WebSocketHandler {
+public class TripWebSocketHandler implements WebSocketHandler {
     private final Map<WebSocketSession, String> sessions = new ConcurrentHashMap<>();
     @Autowired
     GeoNodeService geoNodeService;
@@ -18,12 +17,12 @@ public class PlacesWebSocketHandler implements WebSocketHandler {
     public void handleMessage(WebSocketSession session, WebSocketMessage<?> message) throws Exception {
         String payload = (String) message.getPayload();
         if (payload.equals("stop")) {
-            PlaceService.stop = true; GeoNodeService.stop = true;
+            TripService.stop = true; GeoNodeService.stop = true;
             session.close();
             sessions.remove(session);
 
         } else {
-            PlaceService.stop = false; GeoNodeService.stop = false;
+            TripService.stop = false; GeoNodeService.stop = false;
             String destination = payload;
             geoNodeService.getAllGeoPositionsFromBfsAlgo(destination);
             sessions.put(session, destination);

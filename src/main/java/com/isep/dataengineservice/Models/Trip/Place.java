@@ -1,4 +1,4 @@
-package com.isep.dataengineservice.Models;
+package com.isep.dataengineservice.Models.Trip;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

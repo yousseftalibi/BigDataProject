@@ -1,6 +1,6 @@
 package com.isep.dataengineservice.Repository;
 
-import com.isep.dataengineservice.Models.User;
+import com.isep.dataengineservice.Models.User.User;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
@@ -53,13 +53,13 @@ public class UserRepository {
         catch (SQLException sqlE){
             throw new SQLException(sqlE);
         }
-
     }
-    public void registerUser(User user) throws SQLException {
+
+    public void registerUser(String username, String password) throws SQLException {
         String createUser = "INSERT INTO users (username, password) values (?, ?)";
         PreparedStatement ps = connection.prepareStatement(createUser);
-        ps.setString(1, user.getUsername());
-        ps.setString(2, user.getPassword());
+        ps.setString(1, username);
+        ps.setString(2, password);
         ps.executeUpdate();
     }
 
@@ -71,4 +71,11 @@ public class UserRepository {
         return result.next() ? result.getArray("places") : null;
     }
 
+    public Boolean usernameAlreadyTaken(String username) throws SQLException {
+        String query = "SELECT count(username) as count FROM users WHERE username = ?";
+        PreparedStatement ps = connection.prepareStatement(query);
+        ps.setString(1, username);
+        var result = ps.executeQuery();
+        return !result.next();
+    }
 }

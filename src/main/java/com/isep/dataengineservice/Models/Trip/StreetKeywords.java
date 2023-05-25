@@ -1,4 +1,4 @@
-package com.isep.dataengineservice.Models;
+package com.isep.dataengineservice.Models.Trip;
 
 import java.util.Arrays;
 import java.util.List;

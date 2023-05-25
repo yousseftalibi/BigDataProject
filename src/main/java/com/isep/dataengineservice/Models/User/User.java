@@ -1,11 +1,10 @@
-package com.isep.dataengineservice.Models;
+package com.isep.dataengineservice.Models.User;
 import javax.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.io.Serializable;
-
 
 @Entity
 @Data

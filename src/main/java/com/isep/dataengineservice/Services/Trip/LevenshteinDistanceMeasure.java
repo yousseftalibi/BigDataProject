@@ -1,6 +1,6 @@
-package com.isep.dataengineservice.Services;
+package com.isep.dataengineservice.Services.Trip;
 
-import com.isep.dataengineservice.Models.Place;
+import com.isep.dataengineservice.Models.Trip.Place;
 import org.apache.commons.math3.ml.distance.DistanceMeasure;
 import org.apache.commons.text.similarity.LevenshteinDistance;
 import org.apache.spark.api.java.JavaRDD;
