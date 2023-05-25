@@ -73,9 +73,4 @@ public class UserRepository {
         return result.next() ? result.getArray("places") : null;
     }
 
-
-
-
-
-
 }

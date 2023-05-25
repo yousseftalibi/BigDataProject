@@ -22,10 +22,10 @@ public class GeoNodeService {
     private static final int earthRadius = 6371;
 
     //number of position desired, the larger, the more places we get
-    private static final int numberOfDesiredNodes = 400;
+    private static final int numberOfDesiredNodes = 100;
 
     // 70km maximum distance between initial point and the found geoNode
-    private static final int maxDistance = 200000;
+    private static final int maxDistance = 100000;
     public Set<GeoPosition> BfsSearchGeoNodes(GeoPosition geoNode, LinkedHashSet<GeoPosition> allGeoNodes) {
         //starts with geoNode and returns a list of geoPositions in a radius.
         Queue<GeoPosition> queue = new LinkedList<>();
@@ -45,7 +45,7 @@ public class GeoNodeService {
                 );
 
                 if (isFarEnough && distanceFromStart <= maxDistance && !allGeoNodes.contains(position)) {
-                   // kafkaTemplate.send("GeoNodes", position);
+                    kafkaTemplate.send("GeoNodes", position);
                     allGeoNodes.add(position);
                     queue.add(position);
                 }

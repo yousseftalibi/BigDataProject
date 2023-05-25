@@ -12,7 +12,8 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
-
+// private Integer tempsDeVisite;
+// private Integer visitBudget;
 public class Place implements Serializable {
     private String name;
     private int rate;
@@ -21,8 +22,7 @@ public class Place implements Serializable {
     private String osm;
     private String wikidata;
     private String xid;
-   // private Integer tempsDeVisite;
-   // private Integer visitBudget;
+
 
     @Data
     @Builder
