@@ -1,5 +1,4 @@
 package com.isep.dataengineservice.Controllers;
-
 import com.isep.dataengineservice.Models.User.User;
 import com.isep.dataengineservice.Services.User.UserService;
 import org.jetbrains.annotations.NotNull;
@@ -11,7 +10,6 @@ import java.sql.SQLException;
 import java.util.List;
 
 @RestController
-
 public class UserController {
     @Autowired
     UserService userService;
@@ -34,4 +32,7 @@ public class UserController {
         User user = userService.getUserById(id);
         return userService.getFriends(user);
     }
+
+
+
 }

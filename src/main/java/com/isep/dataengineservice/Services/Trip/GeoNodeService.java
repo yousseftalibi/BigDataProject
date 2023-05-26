@@ -131,9 +131,9 @@ public class GeoNodeService {
         RestTemplate restTemplate = new RestTemplate();
         String uri = "https://opentripmap-places-v1.p.rapidapi.com/en/places/geoname?name="+city;
         HttpHeaders headers = new HttpHeaders();
-        //headers.add("X-RapidAPI-Key", "6a4f81847bmsh8785c9220ccebdfp1b97bfjsn74f82815c241");
+        headers.add("X-RapidAPI-Key", "6a4f81847bmsh8785c9220ccebdfp1b97bfjsn74f82815c241");
         //headers.add("X-RapidAPI-Key", "01f3cd1780mshb2b87fa150c52f3p195ac3jsn0517fb556b09");
-        headers.add("X-RapidAPI-Key", "c4d4c4a3afmsh8073c2210da8497p1bf278jsne8174b51a3ec");
+        //headers.add("X-RapidAPI-Key", "c4d4c4a3afmsh8073c2210da8497p1bf278jsne8174b51a3ec");
 
         headers.add("X-RapidAPI-Host", "opentripmap-places-v1.p.rapidapi.com");
         HttpEntity<String> requestEntity = new HttpEntity<>(headers);

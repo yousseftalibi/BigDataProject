@@ -1,6 +1,7 @@
 package com.isep.dataengineservice.Config;
 
-import com.isep.dataengineservice.Services.Trip.TripWebSocketHandler;
+import com.isep.dataengineservice.Controllers.MessageWebSocketHandler;
+import com.isep.dataengineservice.Controllers.TripWebSocketHandler;
 import com.isep.dataengineservice.Services.User.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
@@ -14,11 +15,11 @@ public class WebSocketConfig implements WebSocketConfigurer {
     @Autowired
     TripWebSocketHandler tripWebSocketHandler;
     @Autowired
-    UserService userService;
+    MessageWebSocketHandler messageWebSocketHandler;
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(tripWebSocketHandler, "/places").setAllowedOrigins("*");
-        registry.addHandler(tripWebSocketHandler, "/chat").setAllowedOrigins("*");
+        registry.addHandler(messageWebSocketHandler, "/chat").setAllowedOrigins("*");
     }
 
 }

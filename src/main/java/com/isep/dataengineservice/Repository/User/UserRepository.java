@@ -1,5 +1,6 @@
-package com.isep.dataengineservice.Repository;
+package com.isep.dataengineservice.Repository.User;
 
+import com.isep.dataengineservice.Models.User.ChatMessage;
 import com.isep.dataengineservice.Models.User.User;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -78,4 +79,7 @@ public class UserRepository {
         var result = ps.executeQuery();
         return !result.next();
     }
+
+
+
 }

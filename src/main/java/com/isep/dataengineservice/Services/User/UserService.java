@@ -1,7 +1,9 @@
 package com.isep.dataengineservice.Services.User;
 
+import com.isep.dataengineservice.Models.User.Profile;
 import com.isep.dataengineservice.Models.User.User;
-import com.isep.dataengineservice.Repository.UserRepository;
+import com.isep.dataengineservice.Repository.User.ProfileRepository;
+import com.isep.dataengineservice.Repository.User.UserRepository;
 import lombok.var;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -23,6 +25,7 @@ public class UserService {
     PasswordEncoder passwordEncoder;
     @Autowired
     Connection connection;
+
 
     public User getUserById(int userId) throws SQLException {
        return userRepository.getUserById(userId);
@@ -65,6 +68,7 @@ public class UserService {
         userRepository.registerUser(username, password);
         return userRepository.getUserByUsername(username) != null;
     }
+
 
 }
 

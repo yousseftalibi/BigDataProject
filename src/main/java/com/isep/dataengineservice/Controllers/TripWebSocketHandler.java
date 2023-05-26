@@ -1,7 +1,9 @@
-package com.isep.dataengineservice.Services.Trip;
+package com.isep.dataengineservice.Controllers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.isep.dataengineservice.Models.Trip.Place;
+import com.isep.dataengineservice.Services.Trip.GeoNodeService;
+import com.isep.dataengineservice.Services.Trip.TripService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.*;
