@@ -32,4 +32,11 @@ public class ProfileController {
         List<ChatMessage> messages = profileService.getMessagesByUserId(userId);
         return messages != null ? ResponseEntity.ok(messages) : ResponseEntity.status(HttpStatus.NOT_FOUND).build();
     }
+
+    @GetMapping(value="/api/searchProfiles")
+    public ResponseEntity<List<Profile>> searchUsersProfiles(@RequestParam String query) throws SQLException {
+        List<Profile> profiles = profileService.searchUsers(query);
+        return ResponseEntity.ok(profiles);
+    }
+
 }

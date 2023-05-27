@@ -9,6 +9,7 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -74,5 +75,19 @@ public class ProfileRepository {
             messages.add(rowMapper.mapRow(result, 0));
         }
         return messages;
+    }
+
+    public List<Profile> searchUsers(String query) throws SQLException {
+        String sql = "SELECT * FROM profile WHERE first_name LIKE ? OR last_name LIKE ?";
+        PreparedStatement ps = connection.prepareStatement(sql);
+        ps.setString(1, "%" + query + "%");
+        ps.setString(2, "%" + query + "%");
+        ResultSet rs = ps.executeQuery();
+        RowMapper<Profile> rowMapper = new BeanPropertyRowMapper<>(Profile.class);
+        List<Profile> profiles = new ArrayList<>();
+        while (rs.next()) {
+            profiles.add(rowMapper.mapRow(rs, 0));
+        }
+        return profiles;
     }
 }

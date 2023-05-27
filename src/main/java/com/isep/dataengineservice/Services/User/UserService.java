@@ -57,17 +57,21 @@ public class UserService {
             return visitedPlaces;
     }
 
-    public Boolean loginUser(User user) throws SQLException {
-        var existingUser = userRepository.getUserById(user.getId());
-        return existingUser != null && (passwordEncoder.matches(user.getPassword(), existingUser.getPassword()));
+    public User loginUser(User user) throws SQLException {
+        var existingUser = userRepository.getUserByUsername(user.getUsername());
+        if( existingUser != null && (passwordEncoder.matches(user.getPassword(), existingUser.getPassword()))){
+            return existingUser;
+        }
+        return null;
     }
     public boolean usernameTaken(String username) throws SQLException {
         return userRepository.usernameAlreadyTaken(username) ;
     }
     public Boolean registerUser(String username, String password) throws SQLException {
-        userRepository.registerUser(username, password);
+        userRepository.registerUser(username, passwordEncoder.encode(password));
         return userRepository.getUserByUsername(username) != null;
     }
+
 
 
 }

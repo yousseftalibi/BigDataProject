@@ -25,4 +25,7 @@ public class ProfileService {
     public List<ChatMessage> getMessagesByUserId(int userId) throws SQLException {
         return profileRepository.getMessagesByUserId(userId);
     }
+    public List<Profile> searchUsers(String query) throws SQLException {
+        return profileRepository.searchUsers(query);
+    }
 }
