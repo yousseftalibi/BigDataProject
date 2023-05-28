@@ -1,8 +1,10 @@
 package com.isep.dataengineservice.Controllers;
 
-import com.isep.dataengineservice.Models.User.ChatMessage;
+import com.isep.dataengineservice.Models.User.Posts;
 import com.isep.dataengineservice.Models.User.Profile;
+import com.isep.dataengineservice.Models.User.User;
 import com.isep.dataengineservice.Services.User.ProfileService;
+import com.isep.dataengineservice.Services.User.UserService;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -15,10 +17,21 @@ import java.util.List;
 public class ProfileController {
     @Autowired
     ProfileService profileService;
+    @Autowired
+    UserService userService;
 
-    @GetMapping(value="/api/getProfile")
-    public ResponseEntity<Profile> getProfile(@RequestParam @NotNull Integer userId) throws SQLException {
+    @GetMapping(value="/api/getProfileByUserId")
+    public ResponseEntity<Profile> getProfileByUserId(@RequestParam @NotNull Integer userId) throws SQLException {
         Profile profile = profileService.getProfileByUserId(userId);
+        User user = userService.getUserById(userId);
+        profile.setUser(user);
+        return profile != null ? ResponseEntity.ok(profile) : ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+    }
+    @GetMapping(value="/api/getProfileByProfileId")
+    public ResponseEntity<Profile> getProfileByProfileId(@RequestParam @NotNull Integer profileId) throws SQLException {
+        Profile profile = profileService.getProfileByProfileId(profileId);
+        User user = profileService.getUserByProfileId(profile.getProfileId());
+        profile.setUser(user);
         return profile != null ? ResponseEntity.ok(profile) : ResponseEntity.status(HttpStatus.NOT_FOUND).build();
     }
     @PostMapping(value="/api/addProfile")
@@ -28,8 +41,8 @@ public class ProfileController {
     }
 
     @GetMapping(value="/api/getMessages")
-    public ResponseEntity<List<ChatMessage>> getMessages(@RequestParam @NotNull Integer userId) throws SQLException {
-        List<ChatMessage> messages = profileService.getMessagesByUserId(userId);
+    public ResponseEntity<List<Posts>> getMessages(@RequestParam @NotNull Integer userId) throws SQLException {
+        List<Posts> messages = profileService.getMessagesByUserId(userId);
         return messages != null ? ResponseEntity.ok(messages) : ResponseEntity.status(HttpStatus.NOT_FOUND).build();
     }
 

@@ -9,14 +9,12 @@ import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.sql.SparkSession;
 import org.apache.commons.lang3.StringUtils;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-
 @Service
 public class PlaceClusteringService {
 
@@ -24,14 +22,13 @@ public class PlaceClusteringService {
     SparkSession spark = SparkSession.builder().config(sparkConf).appName("clustering").master("local[*]").getOrCreate();
     JavaSparkContext jsc = new JavaSparkContext(spark.sparkContext());
 
-    @NotNull
-    final double NAME_WEIGHT = 1.2;
-    final double FEATURE_WEIGHT = 1;
-    @NotNull
-    final double EPSILON = 5;
-    final int MIN_POINTS = 1;
-
     public Optional<List<Place>> DbscanCluster(List<Place> places) {
+        //these values are the params of the dbscan clustering algo, they were found by iterating on a list of places, comparing the list of each param and returning the params that maximize the length of the result
+        double nameWeight = 0.008435835996281504;
+        double featureWeight = 0.41624247313724827;
+        double epsilon = 2.518761124585061;
+        int minPoints = 2;
+
         JavaRDD<Place> placesRDD = getPlacesRDD(places);
         JavaRDD<Place> placesNormalized = normalize(placesRDD);
         JavaRDD<Place> placesNormalizedDistancesAndRates = normalizeDistancesAndRates(placesNormalized);
@@ -44,10 +41,10 @@ public class PlaceClusteringService {
                 .collect(Collectors.toList());
 
         //we can change nameWeight and featureWeight to prioritize one over the other.
-        LevenshteinDistanceMeasure myLevenshteinDistanceIMP = new LevenshteinDistanceMeasure(placesNormalizedDistancesAndRates, placeFeatures, NAME_WEIGHT, FEATURE_WEIGHT);
+        LevenshteinDistanceMeasure myLevenshteinDistanceIMP = new LevenshteinDistanceMeasure(placesNormalizedDistancesAndRates, placeFeatures, nameWeight, featureWeight);
 
         //epsilon & minPts affect the result a lot.
-        DBSCANClusterer<DoublePoint> dbscan = new DBSCANClusterer<>(EPSILON, MIN_POINTS, myLevenshteinDistanceIMP);
+        DBSCANClusterer<DoublePoint> dbscan = new DBSCANClusterer<>(epsilon, minPoints, myLevenshteinDistanceIMP);
 
         List<Cluster<DoublePoint>> clusters = dbscan.cluster(indexPoints);
 
@@ -115,5 +112,6 @@ public class PlaceClusteringService {
         return places.map(place -> Place.builder().name(place.getName()).dist(standarize(distances, place.getDist())).rate(standarize(rates, (double) place.getRate()).intValue() ).build()
         );
     }
+
 
 }

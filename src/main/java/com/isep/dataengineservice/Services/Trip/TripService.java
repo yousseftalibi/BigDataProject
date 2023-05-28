@@ -26,31 +26,60 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-
 @Service
 public class TripService {
+
     @Autowired
     TripWebSocketHandler tripWebSocketHandler;
+
     @Autowired
     PlaceClusteringService placeClusteringService;
+
     @Autowired
     TripRepository tripRepository;
+
     @Autowired
     UserService userService;
+
     @Autowired
     KafkaTemplate<String, List<Place>> kafkaPlaceTemplate;
+
     private final List<String> allStreetKeywords = new ArrayList<>();
+
     static final int MIN_RATE_FILTERED = 4;
+
     public static Boolean stop = Boolean.FALSE;
 
+    private boolean testRapidApiKey(String key){
+        RestTemplate restTemplate = new RestTemplate();
+        String uri = "https://opentripmap-places-v1.p.rapidapi.com/en/places/radius?radius=500&lon=0&lat=0";
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("X-RapidAPI-Key", key);
+        headers.add("X-RapidAPI-Host", "opentripmap-places-v1.p.rapidapi.com");
+        HttpEntity<String> requestEntity = new HttpEntity<>(headers);
+        ResponseEntity<Place.ApiResponse> response = restTemplate.exchange(uri, HttpMethod.GET, requestEntity, Place.ApiResponse.class);
+        return response.getStatusCodeValue() == 200;
+    }
+    private String getValidApiKey(){
+        //we have 1000 request per day allowed in the API, so we switch between 3 different keys to extend our limit to 3000.
+        if(testRapidApiKey("6a4f81847bmsh8785c9220ccebdfp1b97bfjsn74f82815c241")){
+            return "6a4f81847bmsh8785c9220ccebdfp1b97bfjsn74f82815c241";
+        }
+        else if(testRapidApiKey("01f3cd1780mshb2b87fa150c52f3p195ac3jsn0517fb556b09")){
+            return "01f3cd1780mshb2b87fa150c52f3p195ac3jsn0517fb556b09";
+        }
+        else{
+            return "c4d4c4a3afmsh8073c2210da8497p1bf278jsne8174b51a3ec";
+        }
+    }
+
     public List<Place> getRawPlaces(Double lon, Double lat) {
+        String rapidApiKey = getValidApiKey();
         RestTemplate restTemplate = new RestTemplate();
         String uri = "https://opentripmap-places-v1.p.rapidapi.com/en/places/radius?radius=500&lon=" + lon + "&lat=" + lat;
         HttpHeaders headers = new HttpHeaders();
-        headers.add("X-RapidAPI-Key", "6a4f81847bmsh8785c9220ccebdfp1b97bfjsn74f82815c241");
+        headers.add("X-RapidAPI-Key", rapidApiKey);
         headers.add("X-RapidAPI-Host", "opentripmap-places-v1.p.rapidapi.com");
-        //headers.add("X-RapidAPI-Key", "01f3cd1780mshb2b87fa150c52f3p195ac3jsn0517fb556b09");
-        //headers.add("X-RapidAPI-Key", "c4d4c4a3afmsh8073c2210da8497p1bf278jsne8174b51a3ec");
         HttpEntity<String> requestEntity = new HttpEntity<>(headers);
         ResponseEntity<Place.ApiResponse> response = restTemplate.exchange(uri, HttpMethod.GET, requestEntity, Place.ApiResponse.class);
         Place.ApiResponse places = response.getBody();
@@ -58,8 +87,8 @@ public class TripService {
                 .map(e -> e.getProperties())
                 .collect(Collectors.toList()));
     }
-    private List<Place> filterPlaces(List<Place> places) {
 
+    private List<Place> filterPlaces(List<Place> places) {
         allStreetKeywords.addAll(StreetKeywords.frenchStreets);
         allStreetKeywords.addAll(StreetKeywords.arabicStreets);
         allStreetKeywords.addAll(StreetKeywords.afrikaansStreets);
@@ -82,10 +111,11 @@ public class TripService {
                 .filter(p -> p.getName() != null && !p.getName().trim().isEmpty())
                 .filter(p -> p.getKinds() != null && !p.getKinds().trim().isEmpty())
                 .filter(p -> allStreetKeywords.stream().noneMatch(keyword -> p.getName().toLowerCase().contains(keyword.toLowerCase())))
+                .filter(p -> !p.getName().matches(".*\\d.*"))  // we exclude places containing a number
                 .collect(Collectors.toList());
     }
 
-    public List<Place> getRawPlacesFromGeoPosition(GeoPosition currentGeoPosition)  {
+    public List<Place> getRawPlacesFromGeoPosition(GeoPosition currentGeoPosition) {
         List<Place> rawPlacesFromPosition = getRawPlaces(currentGeoPosition.getLon(), currentGeoPosition.getLat());
         return rawPlacesFromPosition;
     }
@@ -100,13 +130,13 @@ public class TripService {
         if(!rawPlacesFromPosition.isEmpty()) {
             interestingPlaces = placeClusteringService.DbscanCluster(rawPlacesFromPosition).get();
         }
-
         if(!interestingPlaces.isEmpty()) {
             for (Place place : interestingPlaces) {
                 tripWebSocketHandler.sendPlace(place);
             }
         }
     }
+
     public List<Place> getInterestingPlacesFromRawPlaces(List<Place> rawPlacesFromPosition){
         List<Place> interestingPlaces = new ArrayList<>();
         if(!rawPlacesFromPosition.isEmpty()) {
@@ -120,7 +150,6 @@ public class TripService {
     public void storeInterestingPlaces(@NotNull ConsumerRecord<String, List<Place>> record) throws IOException {
         System.out.println("received interesetingPlaces from rawPlacesListener in PlaceController");
         List<Place> interestingPlaces = record.value();
-
         if(!interestingPlaces.isEmpty()) {
             File resultFile = new File("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\result"+record.offset()+".txt");
             BufferedWriter writer = new BufferedWriter(new FileWriter(resultFile.getAbsoluteFile()));
@@ -136,6 +165,7 @@ public class TripService {
             writer.close();
         }
     }
+
     public Place getPlaceById(String xid) throws SQLException {
         return tripRepository.getPlaceById(xid);
     }
@@ -153,15 +183,11 @@ public class TripService {
         });
         return places;
     }
-    public void visitPlace(Integer userId, Place place) throws SQLException {
-      //  User omayos = _userRepository.getUserById(userId);
-        Place place1 = Place.builder().xid("110").rate(7).kinds("monument").build();
 
-        if(!tripRepository.placeAlreadyExists(place)) {
-            tripRepository.addPlaceToVisitedPlaces(place);
+    public void visitPlace(Integer userId, Place visitedNewPlace) throws SQLException {
+        if(!tripRepository.placeAlreadyExists(visitedNewPlace)) {
+            tripRepository.addPlaceToVisitedPlaces(visitedNewPlace);
         }
-        tripRepository.addVisitedToUser(userId, place);
+        tripRepository.addVisitedToUser(userId, visitedNewPlace);
     }
-
-
 }

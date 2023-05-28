@@ -1,6 +1,5 @@
 package com.isep.dataengineservice.Repository.User;
 
-import com.isep.dataengineservice.Models.User.ChatMessage;
 import com.isep.dataengineservice.Models.User.User;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -81,22 +80,16 @@ public class UserRepository {
     }
 
     public List<User> getAllUsers() throws SQLException {
-        // create query to select all users
         String query = "SELECT * FROM users";
-
-        // prepare statement and execute query
         PreparedStatement ps = connection.prepareStatement(query);
         var result = ps.executeQuery();
-
-        // map result set to user objects using row mapper
         RowMapper<User> rowMapper = new BeanPropertyRowMapper<>(User.class);
         List<User> users = new ArrayList<>();
         while (result.next()) {
             users.add(rowMapper.mapRow(result, 0));
         }
-
-        // return user list
         return users;
     }
+
 
 }

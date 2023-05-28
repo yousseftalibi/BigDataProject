@@ -6,16 +6,16 @@ import java.util.List;
 
 // A GREAT THANKS TO CHATGPT FOR SAVING ME A LOT OF TIME WRITING THESE LISTS.
 public interface StreetKeywords  {
-    List<String> frenchStreets = Arrays.asList("cour", "immeuble",
-            "rue", "chemin", "allée", "impasse", "rond-point",
+    List<String> frenchStreets = Arrays.asList("cour", "immeuble", "rue", "chemin", "allée", "impasse", "rond-point",
             "passerelle", "esplanade", "chaussée", "voie", "sentier",
-            "cours", "pont", "tunnel", "autoroute", "rocade", "périphérique", "route",
-            "départementale", "cité", "hôtel", "métro", "boulevard", "avenue", "maison", "gare", "métro", "Gendarmerie", "école", "hopital"
+            "cours", "tunnel", "autoroute", "rocade", "périphérique", "route",
+            "départementale", "cité", "hôtel", "métro",  "avenue", "maison", "gare", "métro", "Gendarmerie", "école", "hopital",
+            "lycée", "villa", "collège", "hôpital",  "restaurant"
     );
     List<String> englishStreets = Arrays.asList(
             "street",  "drive", "road", "lane", "terrace",
-            "court", "way", "square", "place", "circle", "loop", "alley", "park",
-            "highway", "freeway", "motorway", "interstate", "expressway", "neighborhood"
+            "court", "way", "circle", "loop", "alley",
+            "highway", "freeway", "motorway", "interstate", "expressway", "neighborhood", "house", "restaurant"
     );
 
     List<String> germanStreets = Arrays.asList(
@@ -34,7 +34,7 @@ public interface StreetKeywords  {
             "autostrada", "superstrada", "strada statale", "strada provinciale", "strada comunale"
     );
     List<String> spanishStreets = Arrays.asList(
-            "calle", "avenida", "bulevar", "plaza", "paseo", "carrera", "rambla",
+            "calle", "avenida", "bulevar", "paseo", "carrera",
             "callejón", "pasaje", "ronda", "camino", "carretera", "autopista", "autovía",
             "vía", "travesía", "alameda", "costanera", "extrarradio", "polígono"
     );
@@ -69,8 +69,7 @@ public interface StreetKeywords  {
             "περιφερειακός", "αυτοκινητόδρομος", "εθνική οδός", "επαρχιακή οδός", "τοπική οδός"
     );
     List<String> portugueseStreets = Arrays.asList(
-            "rua", "avenida", "travessa", "estrada", "rodovia", "viela", "beco",
-            "calçadão", "alameda", "viaduto", "ponte", "boulevard", "praça"
+            "rua", "avenida", "travessa", "estrada", "rodovia", "viela", "beco", "viaduto", "ponte", "boulevard", "escola", "vila"
     );
     List<String> polishStreets = Arrays.asList(
             "ulica", "aleja", "droga", "most", "ścieżka", "szosa", "tronka",

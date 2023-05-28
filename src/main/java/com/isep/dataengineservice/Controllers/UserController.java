@@ -10,28 +10,30 @@ import org.springframework.web.bind.annotation.*;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.stream.Collectors;
-
 @RestController
 public class UserController {
+
     @Autowired
     UserService userService;
 
     @Autowired
     UserRepository userRepository;
+
     @PostMapping(value="/api/registerUser")
-    public ResponseEntity<Object> registerUser(@RequestBody @NotNull User user) throws SQLException {
+    public ResponseEntity<User> registerUser(@RequestBody @NotNull User user) throws SQLException {
         Boolean userAlreadyExists = userService.usernameTaken(user.getUsername());
-        return userAlreadyExists ? ResponseEntity.status(HttpStatus.CONFLICT).build() :  ResponseEntity.ok(userService.registerUser(user.getUsername(), user.getPassword()));
+        return userAlreadyExists ? ResponseEntity.status(HttpStatus.CONFLICT).build() : ResponseEntity.ok(userService.registerUser(user.getUsername(), user.getPassword()));
     }
+
     @PostMapping(value="/api/loginUser")
     public ResponseEntity<User> loginUser(@RequestBody @NotNull User user) throws SQLException {
         if(userService.loginUser(user) != null){
             return ResponseEntity.ok(userService.loginUser(user));
-        }
-        else{
+        } else{
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
     }
+
     @GetMapping(value="/api/getFriends")
     public List<User> getFriends(@RequestParam @NotNull Integer id) throws SQLException {
         User user = userService.getUserById(id);
@@ -47,4 +49,9 @@ public class UserController {
         return matchingUsers;
     }
 
+    @PostMapping(value="/api/addFriend")
+    public ResponseEntity<Object> addFriend(@RequestParam @NotNull Integer userId, @RequestParam @NotNull Integer friendId) throws SQLException {
+        userService.addFriend(userId, friendId);
+        return ResponseEntity.ok().build();
+    }
 }

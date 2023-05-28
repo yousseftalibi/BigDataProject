@@ -1,8 +1,7 @@
 package com.isep.dataengineservice.Services.User;
 
-import com.isep.dataengineservice.Models.User.Profile;
 import com.isep.dataengineservice.Models.User.User;
-import com.isep.dataengineservice.Repository.User.ProfileRepository;
+import com.isep.dataengineservice.Repository.User.FriendRepository;
 import com.isep.dataengineservice.Repository.User.UserRepository;
 import lombok.var;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +20,8 @@ import java.util.List;
 public class UserService {
     @Autowired
     UserRepository userRepository;
+    @Autowired
+    FriendRepository friendRepository;
     @Autowired
     PasswordEncoder passwordEncoder;
     @Autowired
@@ -67,9 +68,26 @@ public class UserService {
     public boolean usernameTaken(String username) throws SQLException {
         return userRepository.usernameAlreadyTaken(username) ;
     }
-    public Boolean registerUser(String username, String password) throws SQLException {
+    public User registerUser(String username, String password) throws SQLException {
         userRepository.registerUser(username, passwordEncoder.encode(password));
-        return userRepository.getUserByUsername(username) != null;
+        if(userRepository.getUserByUsername(username) != null){
+            return userRepository.getUserByUsername(username);
+        };
+       return null;
+    }
+
+    public void addFriend(int userId, int friendId) throws SQLException {
+        User user = getUserById(userId);
+        User friend = getUserById(friendId);
+        if (user == null || friend == null) {
+            throw new IllegalArgumentException("invalid user ids");
+        }
+        List<Integer> friendIds = userRepository.getUserFriendIds(user);
+        if (friendIds.contains(friendId)) {
+            throw new IllegalArgumentException("users are already friends");
+        }
+        friendRepository.addFriend(userId, friendId);
+        friendRepository.addFriend(friendId, userId);
     }
 
 

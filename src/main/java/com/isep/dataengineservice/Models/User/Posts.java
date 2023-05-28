@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class ChatMessage {
+public class Posts {
     private Integer id;
     public String message;
 }

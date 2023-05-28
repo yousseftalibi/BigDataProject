@@ -1,7 +1,8 @@
 package com.isep.dataengineservice.Repository.User;
 
-import com.isep.dataengineservice.Models.User.ChatMessage;
+import com.isep.dataengineservice.Models.User.Posts;
 import com.isep.dataengineservice.Models.User.Profile;
+import com.isep.dataengineservice.Models.User.User;
 import lombok.var;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
@@ -28,6 +29,14 @@ public class ProfileRepository {
         return result.next() ? rowMapper.mapRow(result, 0) : null;
     }
 
+    public Profile getProfileByProfileId(int profileId) throws SQLException {
+        String query = "SELECT * FROM profile WHERE profile_id = ?";
+        PreparedStatement ps = connection.prepareStatement(query);
+        ps.setInt(1, profileId);
+        var result = ps.executeQuery();
+        RowMapper<Profile> rowMapper = new BeanPropertyRowMapper<>(Profile.class);
+        return result.next() ? rowMapper.mapRow(result, 0) : null;
+    }
     public void addOrUpdateProfile(Profile profile) throws SQLException {
         // first try to update existing profile
         String updateQuery = "UPDATE profile SET first_name = ?, last_name = ?, email_address = ?, nationality = ? WHERE user_id = ?";
@@ -52,25 +61,25 @@ public class ProfileRepository {
         }
     }
 
-    public void saveMessage(ChatMessage chatMessage) {
+    public void saveMessage(Posts posts) {
         try {
             String insertQuery = "INSERT INTO messages (user_id, message) VALUES (?, ?)";
             PreparedStatement insertPs = connection.prepareStatement(insertQuery);
-            insertPs.setInt(1, chatMessage.getId() );
-            insertPs.setString(2, chatMessage.getMessage());
+            insertPs.setInt(1, posts.getId() );
+            insertPs.setString(2, posts.getMessage());
             insertPs.executeUpdate();
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public List<ChatMessage> getMessagesByUserId(int userId) throws SQLException {
+    public List<Posts> getMessagesByUserId(int userId) throws SQLException {
         String query = "SELECT * FROM messages WHERE user_id = ?";
         PreparedStatement ps = connection.prepareStatement(query);
         ps.setInt(1, userId);
         var result = ps.executeQuery();
-        RowMapper<ChatMessage> rowMapper = new BeanPropertyRowMapper<>(ChatMessage.class);
-        List<ChatMessage> messages = new ArrayList<>();
+        RowMapper<Posts> rowMapper = new BeanPropertyRowMapper<>(Posts.class);
+        List<Posts> messages = new ArrayList<>();
         while (result.next()) {
             messages.add(rowMapper.mapRow(result, 0));
         }
@@ -89,5 +98,14 @@ public class ProfileRepository {
             profiles.add(rowMapper.mapRow(rs, 0));
         }
         return profiles;
+    }
+
+    public User getUserByProfileId(int profileId) throws SQLException {
+        String query = "SELECT u.* FROM users u JOIN profile p ON u.id = p.user_id WHERE p.profile_id = ?";
+        PreparedStatement ps = connection.prepareStatement(query);
+        ps.setInt(1, profileId);
+        var result = ps.executeQuery();
+        RowMapper<User> rowMapper = new BeanPropertyRowMapper<>(User.class);
+        return result.next() ? rowMapper.mapRow(result, 0) : null;
     }
 }

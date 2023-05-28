@@ -2,7 +2,6 @@ package com.isep.dataengineservice.Services.Trip;
 
 import com.isep.dataengineservice.Models.Trip.GeoPosition;
 import com.isep.dataengineservice.Models.Trip.Place;
-import lombok.var;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,7 +13,6 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-
 import java.util.*;
 
 @Service
@@ -26,43 +24,48 @@ public class GeoNodeService {
     private static final int earthRadius = 6371;
 
     //number of position desired, the larger, the more places we get
-    private static final int numberOfDesiredNodes = 500;
+    private static final int numberOfDesiredNodes = 1000;
 
-    // 70km maximum distance between initial point and the found geoNode
-    private static final int maxDistance = 500000;
+    // the maximum distance between initial point and the found geoNode. for example, if we want places in 'Paris' we won't exceed 20KM circle, therefore never leaving the city.
+    private static final int maxDistance = 20000;
     public static Boolean stop = Boolean.FALSE;
     @Autowired
     TripService tripService;
-
     @Autowired
     KafkaTemplate<String, List<Place>> kafkaPlaceTemplate;
+    Map<GeoPosition, String> directionsMap = new HashMap<>();
+
+    private Set<String> badDirections = new HashSet<>();
 
     public Set<GeoPosition> BfsSearchGeoNodes(GeoPosition geoNode, LinkedHashSet<GeoPosition> allGeoNodes) {
-        //starts with geoNode and returns a list of geoPositions in a radius.
+        //starts with geoNode and returns a list of geoPositions in a radius
         Queue<GeoPosition> queue = new LinkedList<>();
+        Map<GeoPosition, String> directionsMap = new HashMap<>();
         geoNode.setDistanceFromStart(0);
         queue.add(geoNode);
 
         while (!queue.isEmpty() && allGeoNodes.size() < numberOfDesiredNodes) {
             GeoPosition currentNode = queue.poll();
-            var threeDirections = getNeighboringNodesInAllDirections(currentNode);
+            directionsMap.remove(currentNode);
+            List<GeoPosition> neighbors = getNeighboringNodesInAllDirections(currentNode);
 
-            threeDirections.forEach(position -> {
-                double distanceFromStart = calculateDistanceBetweenGeoNodes(geoNode.getLat(), geoNode.getLon(), position.getLat(), position.getLon());
-                position.setDistanceFromStart(distanceFromStart);
-
-                boolean isFarEnough = allGeoNodes.stream().noneMatch(existingPlace ->
-                        calculateDistanceBetweenGeoNodes(existingPlace.getLat(), existingPlace.getLon(), position.getLat(), position.getLon()) <= 1000
-                );
-
-                if (isFarEnough && distanceFromStart <= maxDistance && !allGeoNodes.contains(position)) {
-                    kafkaTemplate.send("GeoNodes", position);
-                    allGeoNodes.add(position);
-                    queue.add(position);
+            for (GeoPosition neighbor : neighbors) {
+                if (!badDirections.contains(directionsMap.get(neighbor))) { // if we're in a bad position we stop, like for example an ocean or mountain, ect
+                    double distanceFromStart = calculateDistanceBetweenGeoNodes(geoNode.getLat(), geoNode.getLon(), neighbor.getLat(), neighbor.getLon());
+                    neighbor.setDistanceFromStart(distanceFromStart);
+                    boolean isFarEnough = allGeoNodes.stream().noneMatch(existingPlace ->
+                            calculateDistanceBetweenGeoNodes(existingPlace.getLat(), existingPlace.getLon(), neighbor.getLat(), neighbor.getLon()) <= 50
+                    );
+                    if (isFarEnough && distanceFromStart <= maxDistance && !allGeoNodes.contains(neighbor)) {
+                        kafkaTemplate.send("GeoNodes", neighbor);
+                        allGeoNodes.add(neighbor);
+                        queue.add(neighbor);
+                    }
+                } else {
+                    badDirections.add(directionsMap.get(neighbor));
                 }
-            });
+            }
         }
-        //allGeoNodes.forEach(e -> System.out.println("(" + e.getLat() + ", " + e.getLon() + "),"));
         return allGeoNodes;
     }
 
@@ -71,10 +74,16 @@ public class GeoNodeService {
         GeoPosition east = getNextGeoNode(currentGeoNode.getLat(), currentGeoNode.getLon(), 0);
         GeoPosition north = getNextGeoNode(currentGeoNode.getLat(), currentGeoNode.getLon(), Math.PI / 2);
         GeoPosition west = getNextGeoNode(currentGeoNode.getLat(), currentGeoNode.getLon(), Math.PI);
+        GeoPosition south = getNextGeoNode(currentGeoNode.getLat(), currentGeoNode.getLon(), 3 * Math.PI / 2);
+        directionsMap.put(east, "east");
+        directionsMap.put(north, "north");
+        directionsMap.put(west, "west");
+        directionsMap.put(south, "south");
 
         neighbors.add(east);
         neighbors.add(west);
         neighbors.add(north);
+        neighbors.add(south);
 
         return neighbors;
     }
@@ -85,13 +94,14 @@ public class GeoNodeService {
         //used to get nodes in North/West/East of the current node
         //the math is generated by ChatGPT, analyzed and cleaned by me.
 
-        //we calculate the center of the next circle
-        double geoDistance = 2;
+
+        /*we calculate the center of the next circle, this affects the result ALOT. generally the lower the better but we
+        may get stuck on couple of geoPositions. */
+        double geoDistance = 0.7;
 
         //we convert our lat and lon  to radian
         double startLatitudeRadians = Math.toRadians(lat);
         double startLongitudeRadians = Math.toRadians(lon);
-
 
         //use Haversine to calculate new lat & new lon
         double latitude = Math.asin(
@@ -102,7 +112,6 @@ public class GeoNodeService {
                 Math.sin(theta) * Math.sin(geoDistance / earthRadius) * Math.cos(startLatitudeRadians),
                 Math.cos(geoDistance / earthRadius) - Math.sin(startLatitudeRadians) * Math.sin(latitude)
         );
-
         //convert back to degrees
         double newLat = Math.toDegrees(latitude);
         double newLon = (Math.toDegrees(longitude) + 540) % 360 - 180;
@@ -126,15 +135,35 @@ public class GeoNodeService {
         return distance;
     }
 
+    private boolean testRapidApiKey(String key){
+        RestTemplate restTemplate = new RestTemplate();
+        String uri = "https://opentripmap-places-v1.p.rapidapi.com/en/places/radius?radius=500&lon=0&lat=0";
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("X-RapidAPI-Key", key);
+        headers.add("X-RapidAPI-Host", "opentripmap-places-v1.p.rapidapi.com");
+        HttpEntity<String> requestEntity = new HttpEntity<>(headers);
+        ResponseEntity<Place.ApiResponse> response = restTemplate.exchange(uri, HttpMethod.GET, requestEntity, Place.ApiResponse.class);
+        return response.getStatusCodeValue() == 200;
+    }
+
+    private String getValidApiKey(){
+        if(testRapidApiKey("6a4f81847bmsh8785c9220ccebdfp1b97bfjsn74f82815c241")){
+            return "6a4f81847bmsh8785c9220ccebdfp1b97bfjsn74f82815c241";
+        }
+        else if(testRapidApiKey("01f3cd1780mshb2b87fa150c52f3p195ac3jsn0517fb556b09")){
+            return "01f3cd1780mshb2b87fa150c52f3p195ac3jsn0517fb556b09";
+        }
+        else{
+            return "c4d4c4a3afmsh8073c2210da8497p1bf278jsne8174b51a3ec";
+        }
+    }
 
     public GeoPosition getGeoPosition(String city){
+        String rapidApiKey = getValidApiKey();
         RestTemplate restTemplate = new RestTemplate();
         String uri = "https://opentripmap-places-v1.p.rapidapi.com/en/places/geoname?name="+city;
         HttpHeaders headers = new HttpHeaders();
-        headers.add("X-RapidAPI-Key", "6a4f81847bmsh8785c9220ccebdfp1b97bfjsn74f82815c241");
-        //headers.add("X-RapidAPI-Key", "01f3cd1780mshb2b87fa150c52f3p195ac3jsn0517fb556b09");
-        //headers.add("X-RapidAPI-Key", "c4d4c4a3afmsh8073c2210da8497p1bf278jsne8174b51a3ec");
-
+        headers.add("X-RapidAPI-Key", rapidApiKey);
         headers.add("X-RapidAPI-Host", "opentripmap-places-v1.p.rapidapi.com");
         HttpEntity<String> requestEntity = new HttpEntity<>(headers);
         ResponseEntity<GeoPosition> response = restTemplate.exchange(uri, HttpMethod.GET, requestEntity, GeoPosition.class);
@@ -163,7 +192,6 @@ public class GeoNodeService {
         GeoPosition geoPosition = getGeoPosition(PlaceName);
         return BfsSearchGeoNodes(geoPosition, new LinkedHashSet<>());
     }
-
 
 
 }

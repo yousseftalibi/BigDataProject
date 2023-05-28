@@ -3,7 +3,7 @@ package com.isep.dataengineservice.Controllers;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
-import com.isep.dataengineservice.Models.User.ChatMessage;
+import com.isep.dataengineservice.Models.User.Posts;
 import com.isep.dataengineservice.Repository.User.ProfileRepository;
 import lombok.var;
 import org.jetbrains.annotations.NotNull;
@@ -33,15 +33,15 @@ public class MessageWebSocketHandler extends TextWebSocketHandler {
     public void handleTextMessage(WebSocketSession session, @NotNull TextMessage message) throws JsonProcessingException {
         String payload = message.getPayload();
         ObjectMapper postMapper = new JsonMapper();
-        ChatMessage post = postMapper.readValue(payload, ChatMessage.class);
-        var chatMessage = ChatMessage.builder().id(post.getId()).message(post.getMessage()).build();
+        Posts post = postMapper.readValue(payload, Posts.class);
+        var postMessage = Posts.builder().id(post.getId()).message(post.getMessage()).build();
 
-        profileRepository.saveMessage(chatMessage);
+        profileRepository.saveMessage(postMessage);
         ObjectMapper myob = new JsonMapper();
         var openedSessions = sessions.stream().filter(s -> s.isOpen()).collect(Collectors.toList());
         openedSessions.forEach(s -> {
             try {
-                s.sendMessage(new TextMessage(myob.writeValueAsString(chatMessage)));
+                s.sendMessage(new TextMessage(myob.writeValueAsString(postMessage)));
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }

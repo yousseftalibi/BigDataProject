@@ -14,11 +14,12 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
 @Repository
 public class TripRepository {
+
     @Autowired
     UserService userService;
+
     @Autowired
     Connection connection;
 
@@ -29,6 +30,7 @@ public class TripRepository {
         var result = ps.executeQuery();
         return result.next() ? result.getArray("places") : null;
     }
+
     public void addVisitedToUser(Integer userId, Place visitedNewPlace) throws SQLException {
         User user = userService.getUserById(userId);
         Array sqlArray = getVisitedPlaces(user);
@@ -36,7 +38,6 @@ public class TripRepository {
         if(sqlArray != null){
             String[] visitedPlacesArray = (String[]) sqlArray.getArray();
             visitedPlaces = new ArrayList<>(Arrays.asList(visitedPlacesArray));
-
         }
         if(!visitedPlaces.contains(visitedNewPlace.getXid())){
             visitedPlaces.add(visitedNewPlace.getXid());
@@ -49,14 +50,14 @@ public class TripRepository {
         }
     }
 
-      public Place getPlaceById(String xid) throws SQLException {
+    public Place getPlaceById(String xid) throws SQLException {
         String getPlaceByIdQuery = "SELECT * FROM places WHERE xid = ?";
         PreparedStatement ps = connection.prepareStatement(getPlaceByIdQuery);
         ps.setString(1, xid);
         var result = ps.executeQuery();
         if(result.next()){
             return Place.builder().xid(result.getString("xid")).rate(result.getInt("rate")).kinds(result.getString("kinds")).dist(result.getDouble("dist")).name(result.getString("name")).build();
-        }   
+        }
         return null;
     }
 
@@ -65,9 +66,9 @@ public class TripRepository {
         PreparedStatement ps = connection.prepareStatement(placeExistsQuery);
         ps.setString(1, place.getXid());
         var result = ps.executeQuery();
-       return result.next();
+        return result.next();
     }
-    
+
     public void addPlaceToVisitedPlaces (Place place) throws SQLException {
         String visitPlaceQuery = "INSERT INTO places (xid, rate, kinds, dist, name) values (?, ?, ?, ?, ?)";
         PreparedStatement ps = connection.prepareStatement(visitPlaceQuery);
@@ -78,7 +79,4 @@ public class TripRepository {
         ps.setString(5, place.getName());
         ps.executeUpdate();
     }
-
-
-
 }
