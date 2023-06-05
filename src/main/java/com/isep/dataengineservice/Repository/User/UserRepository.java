@@ -1,5 +1,6 @@
 package com.isep.dataengineservice.Repository.User;
 
+import com.isep.dataengineservice.Models.User.Profile;
 import com.isep.dataengineservice.Models.User.User;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,7 +20,7 @@ public class UserRepository {
     @Autowired
     Connection connection;
 
-    public User getUserById(int id) throws SQLException{
+    public User getUserById(int id) throws SQLException {
         String query = "SELECT * FROM users WHERE id = ?";
         PreparedStatement ps = connection.prepareStatement(query);
         ps.setInt(1, id);
@@ -53,6 +54,15 @@ public class UserRepository {
         catch (SQLException sqlE){
             throw new SQLException(sqlE);
         }
+    }
+
+      public void modifyAccount(Integer userId, String newUsername, String newPassword) throws SQLException {
+        String updateQuery = "UPDATE users SET username = ?, password = ? WHERE id = ?";
+        PreparedStatement updatePs = connection.prepareStatement(updateQuery);
+        updatePs.setString(1, newUsername);
+        updatePs.setString(2, newPassword);
+        updatePs.setInt(3, userId);
+        updatePs.executeUpdate();
     }
 
     public void registerUser(String username, String password) throws SQLException {

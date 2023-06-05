@@ -34,6 +34,12 @@ public class UserController {
         }
     }
 
+    @PostMapping(value="/api/modifyAccount/{userId}/{newUsername}/{newPassword}")
+    public void modifyAccount(@PathVariable Integer userId, @PathVariable String newUsername, @PathVariable String newPassword) throws SQLException {
+       userService.modifyAccount(userId, newUsername, newPassword);
+    }
+
+
     @GetMapping(value="/api/getFriends")
     public List<User> getFriends(@RequestParam @NotNull Integer id) throws SQLException {
         User user = userService.getUserById(id);

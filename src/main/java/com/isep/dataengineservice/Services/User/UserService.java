@@ -27,7 +27,9 @@ public class UserService {
     @Autowired
     Connection connection;
 
-
+    public void modifyAccount(Integer userId, String newUsername, String newPassword) throws SQLException {
+        userRepository.modifyAccount(userId, newUsername, passwordEncoder.encode(newPassword));
+    }
     public User getUserById(int userId) throws SQLException {
        return userRepository.getUserById(userId);
     }
