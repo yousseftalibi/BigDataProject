@@ -15,6 +15,8 @@
     <description>DataEngineService</description>
     <properties>
         <java.version>1.8</java.version>
+        <start-class>com.isep.dataengineservice.DataEngineServiceApplication</start-class>
+
     </properties>
     <dependencies>
 
@@ -55,7 +57,7 @@
             <artifactId>spark-dbscan_2.10</artifactId>
             <version>0.2-SNAPSHOT</version>
             <scope>system</scope>
-            <systemPath>${project.basedir}/src/dbscan/spark_dbscan/src/target/scala-2.10/spark_dbscan_2.10-0.0.4.jar</systemPath>
+            <systemPath>${project.basedir}/src/dbscan/target/scala-2.10/spark_dbscan_2.10-0.0.4.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
@@ -96,4 +98,16 @@
 
     </dependencies>
 
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <mainClass>com.isep.dataengineservice.DataEngineServiceApplication</mainClass>
+                </configuration>
+            </plugin>
+        </plugins>
+
+    </build>
 </project>
