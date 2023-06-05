@@ -1,5 +1,6 @@
 package com.isep.dataengineservice.Config;
 
+import com.isep.dataengineservice.Controllers.ChatWebSocketHandler;
 import com.isep.dataengineservice.Controllers.MessageWebSocketHandler;
 import com.isep.dataengineservice.Controllers.TripWebSocketHandler;
 import com.isep.dataengineservice.Services.User.UserService;
@@ -16,10 +17,14 @@ public class WebSocketConfig implements WebSocketConfigurer {
     TripWebSocketHandler tripWebSocketHandler;
     @Autowired
     MessageWebSocketHandler messageWebSocketHandler;
+
+    @Autowired
+    ChatWebSocketHandler chatWebSocketHandler;
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(tripWebSocketHandler, "/places").setAllowedOrigins("*");
         registry.addHandler(messageWebSocketHandler, "/chat").setAllowedOrigins("*");
+        registry.addHandler(chatWebSocketHandler, "/chatRoom").setAllowedOrigins("*");
     }
 
 }
