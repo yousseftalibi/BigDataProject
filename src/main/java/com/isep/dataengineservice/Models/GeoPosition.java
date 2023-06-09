@@ -1,4 +1,4 @@
-package com.isep.dataengineservice.Models.Trip;
+package com.isep.dataengineservice.Models;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

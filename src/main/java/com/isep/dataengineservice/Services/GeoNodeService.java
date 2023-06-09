@@ -1,15 +1,12 @@
-package com.isep.dataengineservice.Services.Trip;
+package com.isep.dataengineservice.Services;
 
-import com.isep.dataengineservice.Models.Trip.GeoPosition;
-import com.isep.dataengineservice.Models.Trip.Place;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.jetbrains.annotations.NotNull;
+import com.isep.dataengineservice.Models.GeoPosition;
+import com.isep.dataengineservice.Models.Place;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
-import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -24,18 +21,13 @@ public class GeoNodeService {
     private static final int earthRadius = 6371;
 
     //number of position desired, the larger, the more places we get
-    private static final int numberOfDesiredNodes = 1000;
+    private static final int numberOfDesiredNodes = 5000000;
 
     // the maximum distance between initial point and the found geoNode. for example, if we want places in 'Paris' we won't exceed 20KM circle, therefore never leaving the city.
-    private static final int maxDistance = 20000;
-    public static Boolean stop = Boolean.FALSE;
-    @Autowired
-    TripService tripService;
+    private static final int maxDistance = 200000;
     @Autowired
     KafkaTemplate<String, List<Place>> kafkaPlaceTemplate;
     Map<GeoPosition, String> directionsMap = new HashMap<>();
-
-    private Set<String> badDirections = new HashSet<>();
 
     public Set<GeoPosition> BfsSearchGeoNodes(GeoPosition geoNode, LinkedHashSet<GeoPosition> allGeoNodes) {
         //starts with geoNode and returns a list of geoPositions in a radius
@@ -50,20 +42,13 @@ public class GeoNodeService {
             List<GeoPosition> neighbors = getNeighboringNodesInAllDirections(currentNode);
 
             for (GeoPosition neighbor : neighbors) {
-                if (!badDirections.contains(directionsMap.get(neighbor))) { // if we're in a bad position we stop, like for example an ocean or mountain, ect
                     double distanceFromStart = calculateDistanceBetweenGeoNodes(geoNode.getLat(), geoNode.getLon(), neighbor.getLat(), neighbor.getLon());
                     neighbor.setDistanceFromStart(distanceFromStart);
-                    boolean isFarEnough = allGeoNodes.stream().noneMatch(existingPlace ->
-                            calculateDistanceBetweenGeoNodes(existingPlace.getLat(), existingPlace.getLon(), neighbor.getLat(), neighbor.getLon()) <= 50
-                    );
-                    if (isFarEnough && distanceFromStart <= maxDistance && !allGeoNodes.contains(neighbor)) {
-                        kafkaTemplate.send("GeoNodes", neighbor);
+
+                    if ( distanceFromStart <= maxDistance && !allGeoNodes.contains(neighbor)) {
                         allGeoNodes.add(neighbor);
                         queue.add(neighbor);
                     }
-                } else {
-                    badDirections.add(directionsMap.get(neighbor));
-                }
             }
         }
         return allGeoNodes;
@@ -153,6 +138,9 @@ public class GeoNodeService {
         else if(testRapidApiKey("01f3cd1780mshb2b87fa150c52f3p195ac3jsn0517fb556b09")){
             return "01f3cd1780mshb2b87fa150c52f3p195ac3jsn0517fb556b09";
         }
+        else if(testRapidApiKey("951fb39597msh0bafa42f6ead260p1823fcjsnf3f2da6d6ce2")){
+            return "951fb39597msh0bafa42f6ead260p1823fcjsnf3f2da6d6ce2";
+        }
         else{
             return "c4d4c4a3afmsh8073c2210da8497p1bf278jsne8174b51a3ec";
         }
@@ -172,26 +160,6 @@ public class GeoNodeService {
     }
 
 
-    //triggered by BfsSearchGeoNodes in getAllGeoPositionsFromBfsAlgo, for each geoPosition with get list of places from RapidAPI and send it to "rawPlace"
-    //in kafka tha triggers getInterestingPlacesFromRawPlaces()
-    @KafkaListener(topics= "GeoNodes", containerFactory = "geoPositionListenerContainerFactory")
-    public void getRawPlacesFromGeoPositionKafka(@NotNull ConsumerRecord<String, GeoPosition> record)  {
-        if(stop){
-            return;
-        }
-        GeoPosition currentGeoPosition = record.value();
-        System.out.println("received geoNodes from GeoNodeService.");
-        List<Place> rawPlacesFromPosition = tripService.getRawPlaces(currentGeoPosition.getLon(), currentGeoPosition.getLat());
-        System.out.println("Got rawPlaces from that geoNode. Sending to rawPlacesController.");
-        if(!rawPlacesFromPosition.isEmpty()){
-            kafkaPlaceTemplate.send("rawPlaces", rawPlacesFromPosition);
-        }
-    }
-
-    public Set<GeoPosition> getAllGeoPositionsFromBfsAlgo(String PlaceName){
-        GeoPosition geoPosition = getGeoPosition(PlaceName);
-        return BfsSearchGeoNodes(geoPosition, new LinkedHashSet<>());
-    }
 
 
 }

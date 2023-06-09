@@ -1,0 +1,13 @@
+{
+  "type" : "record",
+  "name" : "Place",
+  "fields" : [
+    {"name" : "name", "type" : ["string", "null"]},
+    {"name" : "rate", "type" : ["null", "int"]},
+    {"name" : "kinds", "type" : ["null", "string"]},
+    {"name" : "dist", "type" : ["null", "double"]},
+    {"name" : "osm", "type" : ["null", "string"]},
+    {"name" : "wikidata", "type" : ["null", "string"]},
+    {"name" : "xid", "type" : ["null", "string"]}
+  ]
+}

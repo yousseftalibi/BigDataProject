@@ -1,0 +1,12 @@
+{
+  "type" : "record",
+  "name" : "GeoPosition",
+  "fields" : [
+    {"name" : "name", "type" : ["null", "string"]},
+    {"name" : "country", "type" : ["null", "string"]},
+    {"name" : "lat", "type" : ["null", "double"]},
+    {"name" : "lon", "type" : ["null", "double"]},
+    {"name" : "population", "type" : [ "null", "int"]},
+    {"name" : "distanceFromStart", "type" : ["null", "double"]}
+  ]
+}

@@ -1,6 +1,6 @@
-package com.isep.dataengineservice.Services.Trip;
+package com.isep.dataengineservice.Services;
 
-import com.isep.dataengineservice.Models.Trip.Place;
+import com.isep.dataengineservice.Models.Place;
 import org.apache.commons.math3.ml.clustering.Cluster;
 import org.apache.commons.math3.ml.clustering.DBSCANClusterer;
 import org.apache.commons.math3.ml.clustering.DoublePoint;

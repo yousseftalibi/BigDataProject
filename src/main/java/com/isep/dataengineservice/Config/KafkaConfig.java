@@ -1,8 +1,8 @@
 package com.isep.dataengineservice.Config;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.isep.dataengineservice.Models.Trip.GeoPosition;
-import com.isep.dataengineservice.Models.Trip.Place;
+import com.isep.dataengineservice.Models.GeoPosition;
+import com.isep.dataengineservice.Models.Place;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.errors.SerializationException;

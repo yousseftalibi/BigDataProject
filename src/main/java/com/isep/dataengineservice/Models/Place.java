@@ -1,4 +1,4 @@
-package com.isep.dataengineservice.Models.Trip;
+package com.isep.dataengineservice.Models;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -11,8 +11,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-// private Integer tempsDeVisite;
-// private Integer visitBudget;
+
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Place implements Serializable {
     private String name;
