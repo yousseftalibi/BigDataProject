@@ -16,14 +16,20 @@ public class BigDataController {
         bigDataService.storeGeoPositions(city);
     }
 
-    @GetMapping(value="/api/ingestGeoPositions")
-    public void ingestGeoPositions() throws IOException {
-        bigDataService.ingestGeoPositions();
+    @GetMapping(value="/api/ingestGeoPositions/{city}")
+    public void ingestGeoPositions(@PathVariable String city) throws IOException {
+        bigDataService.ingestGeoPositions(city);
     }
 
-    @GetMapping(value="/api/ingestRawPlaces")
-    public void ingestAndStoreRawPlaces() throws IOException {
-        bigDataService.ingestRawPlaces();
+    @GetMapping(value="/api/ingestRawPlaces/{city}")
+    public void ingestAndStoreRawPlaces(@PathVariable String city) throws IOException {
+        bigDataService.ingestRawPlaces(city);
     }
+
+    @GetMapping(value="/api/indexInterestingPlaces/{city}")
+    public void indexInterestingPlaces(@PathVariable String city) throws IOException {
+        bigDataService.fetchAndIndexPlaces(city);
+    }
+
 
 }

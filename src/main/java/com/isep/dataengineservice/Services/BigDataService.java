@@ -3,18 +3,31 @@ package com.isep.dataengineservice.Services;
 import com.google.auth.Credentials;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.storage.*;
+import com.google.common.io.ByteStreams;
 import com.isep.dataengineservice.Models.GeoPosition;
 import com.isep.dataengineservice.Models.Place;
 import org.apache.avro.Schema;
+import org.apache.avro.file.DataFileReader;
 import org.apache.avro.file.DataFileStream;
 import org.apache.avro.file.DataFileWriter;
+import org.apache.avro.file.SeekableByteArrayInput;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumReader;
 import org.apache.avro.io.DatumWriter;
+import org.apache.http.HttpHost;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.elasticsearch.action.DocWriteResponse;
+import org.elasticsearch.action.bulk.BulkItemResponse;
+import org.elasticsearch.action.bulk.BulkRequest;
+import org.elasticsearch.action.bulk.BulkResponse;
+import org.elasticsearch.action.index.IndexRequest;
+import org.elasticsearch.client.RequestOptions;
+import org.elasticsearch.client.RestClient;
+import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
@@ -47,36 +60,7 @@ public class BigDataService {
     private List<Place> interestingPlaces = new ArrayList<>();
     private int id = 0;
 
-    public void storeGeoPositions(String city) throws IOException {
-        GeoPosition parisGeoPos = geoNodeService.getGeoPosition(city);
-        Set<GeoPosition> geoPositionSet = geoNodeService.BfsSearchGeoNodes(parisGeoPos, new LinkedHashSet<>());
-        if(!geoPositionSet.isEmpty()){
-            Schema schema = new Schema.Parser().parse(new File("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\Tripy\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\Trip\\GeoPosition.avsc"));
-            String bucketName = "src_rapidapi";
-            String blobName = "raw/paris_rawGeoPositions.avro";
-            Credentials credentials = GoogleCredentials.fromStream(new FileInputStream("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\Tripy\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\warm-melody-389215-dc811c90b283.json"));
-            Storage storage = StorageOptions.newBuilder()
-                    .setCredentials(credentials)
-                    .build()
-                    .getService();
-            BlobId blobId = BlobId.of(bucketName, blobName);
-            OutputStream outputStream = Channels.newOutputStream(storage.writer(BlobInfo.newBuilder(blobId).build()));
-            DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<>(schema);
-            DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<>(datumWriter);
-            dataFileWriter.create(schema, outputStream);
-            for (GeoPosition geoPosition : geoPositionSet) {
-                GenericRecord geoPositionRecord = new GenericData.Record(schema);
-                geoPositionRecord.put("name", geoPosition.getName());
-                geoPositionRecord.put("country", geoPosition.getCountry());
-                geoPositionRecord.put("lat", geoPosition.getLat());
-                geoPositionRecord.put("lon", geoPosition.getLon());
-                geoPositionRecord.put("population", geoPosition.getPopulation());
-                geoPositionRecord.put("distanceFromStart", geoPosition.getDistanceFromStart());
-                dataFileWriter.append(geoPositionRecord);
-            }
-            dataFileWriter.close();
-        }
-    }
+    public static String city = "";
 
 
     private List<Place> fetchPlacesFromApi(Double lon, Double lat) {
@@ -120,17 +104,51 @@ public class BigDataService {
         }
     }
 
-    public void ingestGeoPositions() throws IOException {
-        String bucketName = "src_rapidapi";
-        String blobName = "raw/paris_rawGeoPositions.avro";
-        Credentials credentials = GoogleCredentials.fromStream(new FileInputStream("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\Tripy\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\warm-melody-389215-dc811c90b283.json"));
+
+    public void storeGeoPositions(String city) throws IOException {
+        BigDataService.city = city;
+        GeoPosition parisGeoPos = geoNodeService.getGeoPosition(BigDataService.city);
+        Set<GeoPosition> geoPositionSet = geoNodeService.BfsSearchGeoNodes(parisGeoPos, new LinkedHashSet<>());
+        if(!geoPositionSet.isEmpty()){
+            Schema schema = new Schema.Parser().parse(new File("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\Tripy\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\GeoPosition.avsc"));
+            String bucketName = "src_apirapid";
+            String blobName = "raw/"+BigDataService.city+"_rawGeoPositions.avro";
+            Credentials credentials = GoogleCredentials.fromStream(new FileInputStream("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\Tripy\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\youssefGoogleCloudStorage.json"));
+            Storage storage = StorageOptions.newBuilder()
+                    .setCredentials(credentials)
+                    .build()
+                    .getService();
+            BlobId blobId = BlobId.of(bucketName, blobName);
+            OutputStream outputStream = Channels.newOutputStream(storage.writer(BlobInfo.newBuilder(blobId).build()));
+            DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<>(schema);
+            DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<>(datumWriter);
+            dataFileWriter.create(schema, outputStream);
+            for (GeoPosition geoPosition : geoPositionSet) {
+                GenericRecord geoPositionRecord = new GenericData.Record(schema);
+                geoPositionRecord.put("name", geoPosition.getName());
+                geoPositionRecord.put("country", geoPosition.getCountry());
+                geoPositionRecord.put("lat", geoPosition.getLat());
+                geoPositionRecord.put("lon", geoPosition.getLon());
+                geoPositionRecord.put("population", geoPosition.getPopulation());
+                geoPositionRecord.put("distanceFromStart", geoPosition.getDistanceFromStart());
+                dataFileWriter.append(geoPositionRecord);
+            }
+            dataFileWriter.close();
+        }
+    }
+
+    public void ingestGeoPositions(String city) throws IOException {
+        BigDataService.city = city;
+        String bucketName = "src_apirapid";
+        String blobName = "raw/"+BigDataService.city+"_rawGeoPositions.avro";
+        Credentials credentials = GoogleCredentials.fromStream(new FileInputStream("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\Tripy\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\youssefGoogleCloudStorage.json"));
         Storage storage = StorageOptions.newBuilder()
                 .setCredentials(credentials)
                 .build()
                 .getService();
         BlobId blobId = BlobId.of(bucketName, blobName);
         Blob blob = storage.get(blobId);
-        Schema schema = new Schema.Parser().parse(new File("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\Tripy\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\Trip\\GeoPosition.avsc"));
+        Schema schema = new Schema.Parser().parse(new File("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\Tripy\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\GeoPosition.avsc"));
 
         DatumReader<GenericRecord> datumReader = new GenericDatumReader<>(schema);
         DataFileStream<GenericRecord> dataFileStream = new DataFileStream<>(new ByteArrayInputStream(blob.getContent()), datumReader);
@@ -166,10 +184,10 @@ public class BigDataService {
 
     public void storeRawPlaces(List<Place> rawPlaces, Integer id) throws IOException {
 
-        Schema schema = new Schema.Parser().parse(new File("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\Tripy\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\Trip\\Place.avsc"));
-        String bucketName = "src_rapidapi";
-        String blobName = "raw/paris_rawPlaces"+id+".avro";
-        Credentials credentials = GoogleCredentials.fromStream(new FileInputStream("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\Tripy\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\warm-melody-389215-dc811c90b283.json"));
+        Schema schema = new Schema.Parser().parse(new File("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\Tripy\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\Place.avsc"));
+        String bucketName = "src_apirapid";
+        String blobName = "raw/"+BigDataService.city+"_rawPlaces"+id+".avro";
+        Credentials credentials = GoogleCredentials.fromStream(new FileInputStream("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\Tripy\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\youssefGoogleCloudStorage.json"));
         Storage storage = StorageOptions.newBuilder()
                 .setCredentials(credentials)
                 .build()
@@ -201,18 +219,19 @@ public class BigDataService {
 
     }
 
-    public void ingestRawPlaces() throws IOException {
-        Credentials credentials = GoogleCredentials.fromStream(new FileInputStream("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\Tripy\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\warm-melody-389215-dc811c90b283.json"));
+    public void ingestRawPlaces(String city) throws IOException {
+        BigDataService.city = city;
+        Credentials credentials = GoogleCredentials.fromStream(new FileInputStream("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\Tripy\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\youssefGoogleCloudStorage.json"));
         Storage storage = StorageOptions.newBuilder()
                 .setCredentials(credentials)
                 .build()
                 .getService();
-        String bucketName = "src_rapidapi";
+        String bucketName = "src_apirapid";
         for(int i = 0; i<=5; i++){
-            String blobName = "raw/paris_rawPlaces"+i+".avro";
+            String blobName = "raw/"+BigDataService.city+"_rawPlaces"+i+".avro";
             BlobId blobId = BlobId.of(bucketName, blobName);
             Blob blob = storage.get(blobId);
-            Schema schema = new Schema.Parser().parse(new File("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\Tripy\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\Trip\\Place.avsc"));
+            Schema schema = new Schema.Parser().parse(new File("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\Tripy\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\Place.avsc"));
             DatumReader<GenericRecord> datumReader = new GenericDatumReader<>(schema);
             DataFileStream<GenericRecord> dataFileStream = new DataFileStream<>(new ByteArrayInputStream(blob.getContent()), datumReader);
             List<Place> rawPlaces = new ArrayList<>();
@@ -252,11 +271,11 @@ public class BigDataService {
     }
 
     public void storeInterestingPlaces(List<Place> rawPlaces) throws IOException {
-        Schema schema = new Schema.Parser().parse(new File("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\Tripy\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\Trip\\Place.avsc"));
-        String bucketName = "src_rapidapi";
-        String blobName = "lake/paris_interestingPlaces"+id+".avro";
+        Schema schema = new Schema.Parser().parse(new File("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\Tripy\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\Place.avsc"));
+        String bucketName = "src_apirapid";
+        String blobName = "lake/"+BigDataService.city+"_interestingPlaces"+id+".avro";
         id++;
-        Credentials credentials = GoogleCredentials.fromStream(new FileInputStream("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\Tripy\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\warm-melody-389215-dc811c90b283.json"));
+        Credentials credentials = GoogleCredentials.fromStream(new FileInputStream("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\Tripy\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\youssefGoogleCloudStorage.json"));
         Storage storage = StorageOptions.newBuilder()
                 .setCredentials(credentials)
                 .build()
@@ -268,7 +287,7 @@ public class BigDataService {
         DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<>(schema);
         DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<>(datumWriter);
         dataFileWriter.create(schema, outputStream);
-        System.out.println("rawPlaces being stored");
+
 
 
         rawPlaces.forEach(rawPlace -> {
@@ -290,6 +309,47 @@ public class BigDataService {
         dataFileWriter.close();
         outputStream.close();
 
+    }
+    public void fetchAndIndexPlaces(String city) throws IOException {
+
+        BigDataService.city = city;
+        String bucketName = "src_apirapid";
+        String blobName = "lake/"+BigDataService.city+"_interestingPlaces"+0+".avro";
+
+        Credentials credentials = GoogleCredentials.fromStream(new FileInputStream("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\Tripy\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\youssefGoogleCloudStorage.json"));
+        Storage storage = StorageOptions.newBuilder()
+                .setCredentials(credentials)
+                .build()
+                .getService();
+
+        Blob blob = storage.get(BlobId.of(bucketName, blobName));
+        InputStream targetStream = Channels.newInputStream(blob.reader());
+        Schema schema = new Schema.Parser().parse(new File("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\Tripy\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\Place.avsc"));
+
+        DatumReader<GenericRecord> datumReader = new GenericDatumReader<>(schema);
+        DataFileReader<GenericRecord> dataFileReader = new DataFileReader<>(new SeekableByteArrayInput(ByteStreams.toByteArray(targetStream)), datumReader);
+
+        RestHighLevelClient client = new RestHighLevelClient(
+                RestClient.builder(new HttpHost("localhost", 9200, "http")));
+
+        BulkRequest request = new BulkRequest();
+
+        while (dataFileReader.hasNext()) {
+            GenericRecord placeRecord = dataFileReader.next();
+            String jsonString = placeRecord.toString();
+
+            request.add(new IndexRequest(BigDataService.city+"_interestingplaces").source(jsonString, XContentType.JSON));
+        }
+
+        BulkResponse bulkResponse = client.bulk(request, RequestOptions.DEFAULT);
+
+        if (bulkResponse.hasFailures()) {
+            System.out.println("Error: " + bulkResponse.buildFailureMessage());
+        }
+
+        dataFileReader.close();
+        targetStream.close();
+        client.close();
     }
 
 }
