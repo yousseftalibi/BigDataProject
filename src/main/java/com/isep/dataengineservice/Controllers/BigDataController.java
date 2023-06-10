@@ -11,6 +11,7 @@ import java.io.IOException;
 public class BigDataController {
     @Autowired
     BigDataService bigDataService;
+
     @GetMapping(value = "api/storeGeoPositions/{city}")
     public void storeGeoPositions(@PathVariable String city) throws IOException{
         bigDataService.storeGeoPositions(city);
@@ -27,9 +28,23 @@ public class BigDataController {
     }
 
     @GetMapping(value="/api/indexInterestingPlaces/{city}")
-    public void indexInterestingPlaces(@PathVariable String city) throws IOException {
-        bigDataService.fetchAndIndexPlaces(city);
+    public void indexInterestingPlacesInELK(@PathVariable String city) throws IOException {
+        bigDataService.fetchAndIndexPlacesInELK(city);
     }
 
+    @GetMapping(value="/api/storePlaceSentiment/{city}")
+    public void storePlaceSentiment(@PathVariable String city) throws IOException, InterruptedException {
+        bigDataService.crossInterestingPlacesWithTweets(city);
+    }
+
+    @GetMapping(value="/api/indexPlaceSentiment/{city}")
+    public void indexPlaceSentimentInELK(@PathVariable String city) throws IOException {
+        bigDataService.fetchAndIndexPlaceSentimentsInELK(city);
+    }
+
+    @GetMapping(value="/")
+    public void test()  {
+        System.out.println("testede");
+    }
 
 }

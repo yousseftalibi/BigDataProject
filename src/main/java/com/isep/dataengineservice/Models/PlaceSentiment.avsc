@@ -1,0 +1,10 @@
+{
+  "type" : "record",
+  "name" : "PlaceSentiment",
+  "fields" : [
+    {"name" : "name", "type" : ["null", "string"]},
+    {"name" : "kinds", "type" : ["null", "string"]},
+    {"name" : "xid", "type" : ["null", "string"]},
+    {"name" : "sentiment", "type" : ["null", "double"]}
+  ]
+}
