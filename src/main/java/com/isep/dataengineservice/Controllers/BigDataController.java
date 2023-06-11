@@ -42,9 +42,5 @@ public class BigDataController {
         bigDataService.fetchAndIndexPlaceSentimentsInELK(city);
     }
 
-    @GetMapping(value="/")
-    public void test()  {
-        System.out.println("testede");
-    }
 
 }

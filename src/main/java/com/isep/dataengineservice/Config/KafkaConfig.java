@@ -51,7 +51,6 @@ public class KafkaConfig {
         params.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "192.168.104.249:9092");
         params.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         params.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
-
         return params;
     }
 
