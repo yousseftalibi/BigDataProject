@@ -136,10 +136,10 @@ public class BigDataService {
         GeoPosition cityGeoNode = geoNodeService.getGeoPosition(BigDataService.city);
         Set<GeoPosition> geoPositionSet = geoNodeService.BfsSearchGeoNodes(cityGeoNode, new LinkedHashSet<>());
         if(!geoPositionSet.isEmpty()){
-            Schema schema = new Schema.Parser().parse(new File("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\Tripy\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\GeoPosition.avsc"));
+            Schema schema = new Schema.Parser().parse(new File("..\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\GeoPosition.avsc"));
             String bucketName = "src_apirapid";
             String blobName = "raw/"+BigDataService.city+"_rawGeoPositions.avro";
-            Credentials credentials = GoogleCredentials.fromStream(new FileInputStream("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\Tripy\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\youssefGoogleCloudStorage.json"));
+            Credentials credentials = GoogleCredentials.fromStream(new FileInputStream("..\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\youssefGoogleCloudStorage.json"));
             Storage storage = StorageOptions.newBuilder()
                     .setCredentials(credentials)
                     .build()
@@ -167,14 +167,14 @@ public class BigDataService {
         BigDataService.city = city;
         String bucketName = "src_apirapid";
         String blobName = "raw/"+BigDataService.city+"_rawGeoPositions.avro";
-        Credentials credentials = GoogleCredentials.fromStream(new FileInputStream("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\Tripy\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\youssefGoogleCloudStorage.json"));
+        Credentials credentials = GoogleCredentials.fromStream(new FileInputStream("..\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\youssefGoogleCloudStorage.json"));
         Storage storage = StorageOptions.newBuilder()
                 .setCredentials(credentials)
                 .build()
                 .getService();
         BlobId blobId = BlobId.of(bucketName, blobName);
         Blob blob = storage.get(blobId);
-        Schema schema = new Schema.Parser().parse(new File("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\Tripy\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\GeoPosition.avsc"));
+        Schema schema = new Schema.Parser().parse(new File("..\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\GeoPosition.avsc"));
 
         DatumReader<GenericRecord> datumReader = new GenericDatumReader<>(schema);
         DataFileStream<GenericRecord> dataFileStream = new DataFileStream<>(new ByteArrayInputStream(blob.getContent()), datumReader);
@@ -209,10 +209,10 @@ public class BigDataService {
 
     public void storeRawPlaces(List<Place> rawPlaces, Integer id) throws IOException {
 
-        Schema schema = new Schema.Parser().parse(new File("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\Tripy\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\Place.avsc"));
+        Schema schema = new Schema.Parser().parse(new File("..\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\Place.avsc"));
         String bucketName = "src_apirapid";
         String blobName = "raw/"+BigDataService.city+"_rawPlaces"+id+".avro";
-        Credentials credentials = GoogleCredentials.fromStream(new FileInputStream("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\Tripy\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\youssefGoogleCloudStorage.json"));
+        Credentials credentials = GoogleCredentials.fromStream(new FileInputStream("..\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\youssefGoogleCloudStorage.json"));
         Storage storage = StorageOptions.newBuilder()
                 .setCredentials(credentials)
                 .build()
@@ -246,7 +246,7 @@ public class BigDataService {
 
     public void ingestRawPlaces(String city) throws IOException {
         BigDataService.city = city;
-        Credentials credentials = GoogleCredentials.fromStream(new FileInputStream("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\Tripy\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\youssefGoogleCloudStorage.json"));
+        Credentials credentials = GoogleCredentials.fromStream(new FileInputStream("..\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\youssefGoogleCloudStorage.json"));
         Storage storage = StorageOptions.newBuilder()
                 .setCredentials(credentials)
                 .build()
@@ -257,7 +257,7 @@ public class BigDataService {
             if (!blob.getName().startsWith("raw/" + BigDataService.city + "_rawPlaces")) {
                 continue;
             }
-            Schema schema = new Schema.Parser().parse(new File("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\Tripy\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\Place.avsc"));
+            Schema schema = new Schema.Parser().parse(new File("..\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\Place.avsc"));
             DatumReader<GenericRecord> datumReader = new GenericDatumReader<>(schema);
             DataFileStream<GenericRecord> dataFileStream = new DataFileStream<>(new ByteArrayInputStream(blob.getContent()), datumReader);
             List<Place> rawPlaces = new ArrayList<>();
@@ -296,10 +296,10 @@ public class BigDataService {
     }
 
     public void storeInterestingPlaces(List<Place> rawPlaces, int id) throws IOException {
-        Schema schema = new Schema.Parser().parse(new File("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\Tripy\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\Place.avsc"));
+        Schema schema = new Schema.Parser().parse(new File("..\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\Place.avsc"));
         String bucketName = "src_apirapid";
         String blobName = "lake/"+BigDataService.city+"_interestingPlaces"+id+".avro";
-        Credentials credentials = GoogleCredentials.fromStream(new FileInputStream("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\Tripy\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\youssefGoogleCloudStorage.json"));
+        Credentials credentials = GoogleCredentials.fromStream(new FileInputStream("..\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\youssefGoogleCloudStorage.json"));
         Storage storage = StorageOptions.newBuilder()
                 .setCredentials(credentials)
                 .build()
@@ -334,7 +334,7 @@ public class BigDataService {
     }
     public void fetchAndIndexPlacesInELK(String city) throws IOException {
             BigDataService.city = city;
-            Credentials credentials = GoogleCredentials.fromStream(new FileInputStream("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\Tripy\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\youssefGoogleCloudStorage.json"));
+            Credentials credentials = GoogleCredentials.fromStream(new FileInputStream("..\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\youssefGoogleCloudStorage.json"));
             Storage storage = StorageOptions.newBuilder()
                 .setCredentials(credentials)
                 .build()
@@ -345,7 +345,7 @@ public class BigDataService {
                 continue;
             }
             InputStream targetStream = Channels.newInputStream(blob.reader());
-            Schema schema = new Schema.Parser().parse(new File("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\Tripy\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\Place.avsc"));
+            Schema schema = new Schema.Parser().parse(new File("..\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\Place.avsc"));
             DatumReader<GenericRecord> datumReader = new GenericDatumReader<>(schema);
             DataFileReader<GenericRecord> dataFileReader = new DataFileReader<>(new SeekableByteArrayInput(ByteStreams.toByteArray(targetStream)), datumReader);
 
@@ -371,7 +371,7 @@ public class BigDataService {
 
     public void fetchAndIndexPlaceSentimentsInELK(String city) throws IOException {
         BigDataService.city = city;
-        Credentials credentials = GoogleCredentials.fromStream(new FileInputStream("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\Tripy\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\youssefGoogleCloudStorage.json"));
+        Credentials credentials = GoogleCredentials.fromStream(new FileInputStream("..\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\youssefGoogleCloudStorage.json"));
         Storage storage = StorageOptions.newBuilder()
                 .setCredentials(credentials)
                 .build()
@@ -383,7 +383,7 @@ public class BigDataService {
                 continue;
             }
             InputStream targetStream = Channels.newInputStream(blob.reader());
-            Schema schema = new Schema.Parser().parse(new File("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\Tripy\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\PlaceSentiment.avsc"));
+            Schema schema = new Schema.Parser().parse(new File("..\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\PlaceSentiment.avsc"));
             DatumReader<GenericRecord> datumReader = new GenericDatumReader<>(schema);
             DataFileReader<GenericRecord> dataFileReader = new DataFileReader<>(new SeekableByteArrayInput(ByteStreams.toByteArray(targetStream)), datumReader);
 
@@ -408,7 +408,7 @@ public class BigDataService {
 
     public void crossInterestingPlacesWithTweets(String city) throws IOException, InterruptedException {
         BigDataService.city = city;
-        Credentials credentials = GoogleCredentials.fromStream(new FileInputStream("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\Tripy\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\youssefGoogleCloudStorage.json"));
+        Credentials credentials = GoogleCredentials.fromStream(new FileInputStream("..\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\youssefGoogleCloudStorage.json"));
         Storage storage = StorageOptions.newBuilder()
                 .setCredentials(credentials)
                 .build()
@@ -418,7 +418,7 @@ public class BigDataService {
             if (!blob.getName().startsWith("lake/" + BigDataService.city + "_interestingPlaces")) {
                 continue;
             }
-            Schema schema = new Schema.Parser().parse(new File("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\Tripy\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\Place.avsc"));
+            Schema schema = new Schema.Parser().parse(new File("..\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\Place.avsc"));
             DatumReader<GenericRecord> datumReader = new GenericDatumReader<>(schema);
             DataFileStream<GenericRecord> dataFileStream = new DataFileStream<>(new ByteArrayInputStream(blob.getContent()), datumReader);
             while (dataFileStream.hasNext()) {
@@ -441,10 +441,10 @@ public class BigDataService {
     public void storePlaceSentiment(PlaceSentiment placeSentiment, int id) throws IOException {
         placeSentiments.add(placeSentiment);
         if (placeSentiments.size() >= 10 && id <= 4) {
-            Schema schema = new Schema.Parser().parse(new File("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\Tripy\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\PlaceSentiment.avsc"));
+            Schema schema = new Schema.Parser().parse(new File("..\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\PlaceSentiment.avsc"));
             String bucketName = "src_twitter";
             String blobName = "lake/" + BigDataService.city + "_placeSentiments" + id + ".avro";
-            Credentials credentials = GoogleCredentials.fromStream(new FileInputStream("C:\\Users\\youss\\OneDrive\\Desktop\\desktop\\Tripy\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\youssefGoogleCloudStorage.json"));
+            Credentials credentials = GoogleCredentials.fromStream(new FileInputStream("..\\PlacesApp\\src\\main\\java\\com\\isep\\dataengineservice\\Models\\youssefGoogleCloudStorage.json"));
             Storage storage = StorageOptions.newBuilder()
                     .setCredentials(credentials)
                     .build()
